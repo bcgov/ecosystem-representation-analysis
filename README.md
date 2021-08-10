@@ -30,7 +30,7 @@ data science projects in R. You can install `targets` from CRAN:
 #install.packages("targets")
 ```
 
-\#Usage Run `targets::tar_make()` to run project. This will run all of
+#Usage Run `targets::tar_make()` to run project. This will run all of
 the analysis - no individual scripts are required.
 
 ### Required R packages
