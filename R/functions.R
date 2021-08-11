@@ -13,18 +13,6 @@
 
 # Loading data functions --------------------------------------------------
 
-get_wha_data <- function(){
-  wha_data <- bcdc_get_data("WHSE_WILDLIFE_MANAGEMENT.WCP_WILDLIFE_HABITAT_AREA_POLY") %>%
-      rename_with(tolower)
-  wha_data
-}
-
-get_ogma_data <- function(){
-  ogma_data <- bcdc_query_geodata("WHSE_LAND_USE_PLANNING.RMP_OGMA_LEGAL_CURRENT_SVW") %>%
-    collect() %>%
-    rename_with(tolower)
-  ogma_data
-}
 
 get_cpcad_bc_data <- function() {
   f <- "CPCAD-BDCAPC_Dec2020.gdb.zip"
