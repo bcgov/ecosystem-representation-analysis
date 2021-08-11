@@ -49,9 +49,7 @@ load_ecoregions <- function(){
 load_bec <- function(){
   bec <- bec(ask = FALSE) %>%
     rename_all(tolower) %>%
-    select(zone, subzone, zone_name, subzone_name, natural_disturbance_name) %>%
     st_cast(to="POLYGON", warn = FALSE)
-  bec$zone_name <- str_replace_all(bec$zone_name, "-- ", "")
   bec
 }
 
