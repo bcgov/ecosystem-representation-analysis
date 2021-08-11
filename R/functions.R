@@ -100,14 +100,23 @@ clean_up_dates <- function(data, input1, input2, output){
   output
 }
 
-remove_overlaps <- function(data, output){
+remove_overlaps <- function(data, sample = NULL ){
+  if (!is.null(sample)) {
+    rows <- sample(nrow(data), sample, replace = FALSE)
+    data <- data[rows, ]
+  }
   output <- data %>%
-    mutate(area_single = as.numeric(st_area(.))) %>% # Calculate indiv area
+    mutate(area_single = as.numeric(st_area(.)), # Calculate indiv area
+           iucn_cat = factor(iucn_cat, levels = c("Ia", "Ib", "II", "III", "IV",
+                                                  "V", "VI", "Yes", "N/A"))) %>%
+    arrange(desc(oecm), iucn_cat, desc(area_single)) %>%
+    st_cast() %>%
+    st_cast(to="POLYGON", warn = FALSE) %>%
     st_make_valid() %>%
     st_difference() %>%                             # Remove overlaps (~45min)
     st_make_valid()        # Fix Self-intersections (again!)
-  output
   write_rds(output, "data/CPCAD_Dec2020_BC_clean_no_ovlps.rds") #save to disk for date checks
+  output
 }
 
 # classify_land_type <- function(data){
