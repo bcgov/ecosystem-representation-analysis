@@ -25,10 +25,12 @@ get_cpcad_bc_data <- function() {
 
   pa <- st_read(ff, layer = "CPCAD_Dec2020") %>%
     rename_all(tolower) %>%
-    dplyr::filter(str_detect(loc_e, "Pacific|British Columbia")) %>%
+    dplyr::filter(str_detect(loc_e, "British Columbia")) %>%
     dplyr::filter(!(aichi_t11 == "No" & oecm == "No")) %>%
+    dplyr::filter(biome == "T") %>%
+    mutate(pa_type = ifelse(oecm == "No", "ppa", "oecm")) %>%
     st_make_valid() %>%
-    st_transform(st_crs(3005)) %>% # Apply crs from wildlife habitat area for direct comparison
+    st_transform(st_crs(3005)) %>%
     mutate(area_all = as.numeric(st_area(.))) %>%
     st_cast(to = "POLYGON", warn = FALSE)
   pa
