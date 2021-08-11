@@ -145,7 +145,7 @@ remove_overlaps <- function(data, sample = NULL ){
 
 # intersect data ----------------------------------------------------------
 
-clip_bec_to_bc_boundary <- function(data, simplify = FALSE){# Clip BEC to BC outline ---
+clip_to_bc_boundary <- function(data, simplify = FALSE){# Clip BEC to BC outline ---
   bc <- bc_bound_hres(ask = FALSE)
   geojson_write(data, file = "data/bec.geojson")
   geojson_write(bc, file = "data/bc.geojson")
@@ -158,7 +158,7 @@ clip_bec_to_bc_boundary <- function(data, simplify = FALSE){# Clip BEC to BC out
   if (simplify) {
     outfile <- "data/bec_clipped_simp.geojson"
     system(glue("mapshaper-xl data/bec_clipped.geojson ",
-                "-simplify 50% ",
+                "-simplify 50% keep-shapes ",
                 "-o ", outfile))
   }
 
