@@ -77,7 +77,7 @@ fill_in_dates <- function(data, column, join, landtype, output){
 clean_up_dates <- function(data, input1, input2, output){
   output <- data %>%
     dplyr::filter(!name_e %in% c("Wildlife Habitat Areas",
-                          "Old Growth Management Areas (Mapped Legal)")) %>%
+                                 "Old Growth Management Areas (Mapped Legal)")) %>%
     bind_rows(input1, input2)
 
   output <- output %>%
@@ -147,19 +147,24 @@ remove_overlaps <- function(data, sample = NULL ){
 
 # intersect data ----------------------------------------------------------
 
-clip_bec_to_bc_boundary<- function(data){# Clip BEC to BC outline ---
+clip_bec_to_bc_boundary <- function(data, simplify = FALSE){# Clip BEC to BC outline ---
   bc <- bc_bound_hres(ask = FALSE)
   geojson_write(data, file = "data/bec.geojson")
   geojson_write(bc, file = "data/bc.geojson")
 
+  outfile <- "data/bec_clipped.geojson"
   system(glue("mapshaper-xl data/bec.geojson ",
               "-clip data/bc.geojson remove-slivers ",
-              "-o data/bec_clipped.geojson"))
+              "-o ", outfile))
 
-  system(glue("mapshaper-xl data/bec_clipped.geojson ",
-              "-simplify 50% ",
-              "-o data/bec_clipped_simp.geojson"))
-  output <- st_read("data/bec_clipped_simp.geojson", crs=3005)%>% # geojson doesn't have CRS so have to remind R that CRS is BC Albers
+  if (simplify) {
+    outfile <- "data/bec_clipped_simp.geojson"
+    system(glue("mapshaper-xl data/bec_clipped.geojson ",
+                "-simplify 50% ",
+                "-o ", outfile))
+  }
+
+  output <- st_read(outfile, crs=3005)%>% # geojson doesn't have CRS so have to remind R that CRS is BC Albers
     st_make_valid() %>%
     st_cast() %>%
     st_cast(to="POLYGON", warn = FALSE)
@@ -571,11 +576,11 @@ eco_bar <- function(data){
     select(ecoregion_name, ecoregion_code, type, park_type, p_type, p_region) %>%
     arrange(desc(p_type)) %>%
     mutate(type_combo = glue("{tools::toTitleCase(type)} - {park_type}"),
-         type_combo = factor(type_combo,
-                             levels = c("Land - OECM", "Land - PPA",
-                                        "Water - OECM", "Water - PPA")),
-         ecoregion_type_combo = glue("{ecoregion_name} - {tools::toTitleCase(type)}"),
-         ecoregion_name = as.factor(ecoregion_name)) %>%
+           type_combo = factor(type_combo,
+                               levels = c("Land - OECM", "Land - PPA",
+                                          "Water - OECM", "Water - PPA")),
+           ecoregion_type_combo = glue("{ecoregion_name} - {tools::toTitleCase(type)}"),
+           ecoregion_name = as.factor(ecoregion_name)) %>%
     ungroup()
 
   scale_land <- c("OECM" = "#93c288", "PPA" = "#004529")
@@ -585,39 +590,39 @@ eco_bar <- function(data){
                           c("Land - OECM", "Land - PPA",
                             "Water - OECM", "Water - PPA"))
 
-    land <- ggplot(data=dplyr::filter(data, type=="land"),
-                   aes(x = round(p_type,2), y = fct_reorder(ecoregion_name, p_region, .desc=FALSE),
-                       fill = type, alpha = park_type)) +
-      theme_minimal(base_size = 14) +
-      theme(panel.grid.major.y = element_blank(),
-            legend.position = c(0.7, 0.3)) +
-      geom_bar(width = 0.9, stat = "identity") +
-      labs(y = "Ecoregion") +
-      theme(axis.title.x=element_blank())+
-      scale_fill_manual(values = scale_map, guide = FALSE) +
-      scale_alpha_manual(name = "Type", values = c("OECM" = 0.5, "PA" = 1)) +
-      scale_x_continuous(expand = c(0,0), limits=c(0,110)) +
-      guides(alpha = guide_legend(override.aes = list(fill = "black"))) #+
-    land
+  land <- ggplot(data=dplyr::filter(data, type=="land"),
+                 aes(x = round(p_type,2), y = fct_reorder(ecoregion_name, p_region, .desc=FALSE),
+                     fill = type, alpha = park_type)) +
+    theme_minimal(base_size = 14) +
+    theme(panel.grid.major.y = element_blank(),
+          legend.position = c(0.7, 0.3)) +
+    geom_bar(width = 0.9, stat = "identity") +
+    labs(y = "Ecoregion") +
+    theme(axis.title.x=element_blank())+
+    scale_fill_manual(values = scale_map, guide = FALSE) +
+    scale_alpha_manual(name = "Type", values = c("OECM" = 0.5, "PA" = 1)) +
+    scale_x_continuous(expand = c(0,0), limits=c(0,110)) +
+    guides(alpha = guide_legend(override.aes = list(fill = "black"))) #+
+  land
 
-    water <-ggplot(data=dplyr::filter(data, type=="water"),
-                       aes(x = round(p_type,2), y = fct_reorder(ecoregion_name, p_region, .desc=FALSE),
-                           fill = type, alpha = park_type)) +
-      theme_minimal(base_size = 14) +
-      theme(panel.grid.major.y = element_blank(),
-            legend.position = c(0.7, 0.5)) +
-      geom_bar(width = 0.9, stat = "identity") +
-      labs(x = "Percent Conserved Within Ecoregion (%)") +
-      theme(axis.title.y=element_blank())+
-      scale_fill_manual(values = scale_map, guide = FALSE) +
-      scale_alpha_manual(name = "Type", values = c("OECM" = 0.5, "PA" = 1)) +
-      scale_x_continuous(expand = c(0,0), limits=c(0,110)) +
-      theme(legend.position='none')
-    water
+  water <-ggplot(data=dplyr::filter(data, type=="water"),
+                 aes(x = round(p_type,2), y = fct_reorder(ecoregion_name, p_region, .desc=FALSE),
+                     fill = type, alpha = park_type)) +
+    theme_minimal(base_size = 14) +
+    theme(panel.grid.major.y = element_blank(),
+          legend.position = c(0.7, 0.5)) +
+    geom_bar(width = 0.9, stat = "identity") +
+    labs(x = "Percent Conserved Within Ecoregion (%)") +
+    theme(axis.title.y=element_blank())+
+    scale_fill_manual(values = scale_map, guide = FALSE) +
+    scale_alpha_manual(name = "Type", values = c("OECM" = 0.5, "PA" = 1)) +
+    scale_x_continuous(expand = c(0,0), limits=c(0,110)) +
+    theme(legend.position='none')
+  water
 
-    combined <- plot_grid(land, water, ncol=1, align="v", rel_heights=c(4,1))
+  combined <- plot_grid(land, water, ncol=1, align="v", rel_heights=c(4,1))
 
 
-    ggsave("out/eco_bar_all.png", combined, width = 9, height = 9, dpi = 300)
-    combined
+  ggsave("out/eco_bar_all.png", combined, width = 9, height = 9, dpi = 300)
+  combined
 }
