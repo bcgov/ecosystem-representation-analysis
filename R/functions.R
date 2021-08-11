@@ -224,8 +224,16 @@ fix_ecoregions <- function(data){
   ecoregions_comb
 }
 
-intersect_pa <- function(input1, input2, output){
+intersect_pa <- function(input1, input2){
+  if (!sf:::is_overlayng()) {
+    # Setting precision of inputs if OverlayNG
+    # is not enabled (sf built with GEOS < 3.9)
+    # should speed it up a lot
+    sf::st_precision(input1) <- 1e8
+    sf::st_precision(input2) <- 1e8
+  }
   output <- st_intersection(input1, input2) %>%
+    st_make_valid() %>%
     st_collection_extract(type = "POLYGON")
   output
 }
