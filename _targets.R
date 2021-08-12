@@ -25,19 +25,20 @@ source("R/functions.R")
 load_data <- list(
   tar_target(pa_data, get_cpcad_bc_data()),
   tar_target(ecoregions, load_ecoregions()),
-  tar_target(bec_zones, load_bec())
+  tar_target(bec, load_bec())
 )
 
 # clean data --------------------------------------------------------------
 clean_data <- list(
-  tar_target(clean_pa, remove_overlaps(pa_data))
+  tar_target(clean_pa, remove_overlaps(pa_data)),
+  tar_target(clipped_bec, clip_to_bc_boundary(bec, simplify = TRUE)),
+  tar_target(clipped_eco, clip_to_bc_boundary(ecoregions, simplify = TRUE))
 )
 
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
-  tar_target(clipped_bec, clip_bec_to_bc_boundary(bec_zones)),
-  tar_target(pa_eco, intersect_pa(ecoregions, clean_pa)),
-  tar_target(pa_bec, intersect_pa(clipped_bec, clean_pa))
+  tar_target(eco_bec, intersect_pa(ecoregions, bec)),
+  tar_target(pa_bec_eco, st_intersection(clean_pa, eco_bec[eco_bec$ecoregion_code %in% c("NCM", "TOP"), ]))
 )
 
 # simplify spatial data  --------------------------------------------------
@@ -50,10 +51,10 @@ simplify_data <- list(
 
 # analyze and prepare for visualization -----------------------------------
 analyze_data <- list(
-  tar_target(ecoregion_totals, find_ecoregion_size(ecoregions)),
-  tar_target(pa_eco_sum, protected_area_by_eco(pa_eco, ecoregion_totals)),
-  tar_target(pa_bec_sum, protected_area_by_bec(bec_zones, pa_bec)),
-  tar_target(total_prot_area, protected_area_totals(pa_eco, pa_eco_sum))
+  # tar_target(ecoregion_totals, find_ecoregion_size(ecoregions)),
+  # tar_target(pa_eco_sum, protected_area_by_eco(pa_eco, ecoregion_totals)),
+  tar_target(pa_eco_bec_sum, protected_area_by_bec_eco(eco_bec, pa_bec_eco))
+  # tar_target(total_prot_area, protected_area_totals(pa_eco, pa_eco_sum))
 )
 
 # supplemental bec zone plots ---------------------------------------------
@@ -67,8 +68,8 @@ plot_data <- list(
 # targets pipeline --------------------------------------------------------
 list(
   load_data,
-  clean_data
-  # intersect_data,
+  clean_data,
+  intersect_data
   # simplify_data,
   # analyze_data,
   # plot_data
