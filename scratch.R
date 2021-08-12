@@ -1,19 +1,22 @@
 library(ggplot2)
-library(forcats)
 library(rmapshaper)
 library(tidyr)
+library(dplyr)
+library(tidytext) # for reorder_within() and scale_x_reordered()
+library(readr)
+library(sf)
 
-# Runs after 'intersec_data' targets list
+# Runs after 'intersect_data' targets list
 
 left <- eco_bec[eco_bec$ecoregion_code %in% unique(pa_bec_eco$ecoregion_code), ] %>%
   mutate(eco_var_area = st_area(.)) %>%
-  group_by(ecoregion_name, zone, subzone, variant) %>%
+  group_by(ecoregion_code, ecoregion_name, zone, subzone, variant) %>%
   summarise(tot_area = as.numeric(sum(eco_var_area)), is_coverage = TRUE)
 
 right <- pa_bec_eco %>%
   mutate(pa_area = st_area(.)) %>%
   st_drop_geometry() %>%
-  group_by(ecoregion_name, zone, subzone, variant, pa_type) %>%
+  group_by(ecoregion_code, ecoregion_name, zone, subzone, variant, pa_type) %>%
   summarise(pa_area = as.numeric(sum(pa_area)))
 
 tab_output <- st_drop_geometry(left) %>%
@@ -22,12 +25,29 @@ tab_output <- st_drop_geometry(left) %>%
          percent_prot = ifelse(is.na(percent_prot), 0, percent_prot),
          bec_variant = gsub("NA$", "", paste0(zone, subzone, variant)))
 
-eco_rep_barplot <- ggplot(st_drop_geometry(output)) +
-  geom_col(aes(x = fct_reorder(bec_variant, percent_prot, .fun = sum), y = percent_prot, fill = pa_type)) +
+(eco_rep_barplot <- ggplot(tab_output) +
+  geom_col(aes(x = reorder_within(bec_variant, percent_prot, ecoregion_name, fun = sum), y = percent_prot, fill = pa_type)) +
+  facet_grid(vars(ecoregion_name), scales = "free_y") +
   coord_flip() +
   scale_fill_discrete(na.translate = FALSE) +
+  scale_x_reordered() +
   labs(fill = "Conserved Area Type", y = "Percent Conserved", x = "BEC Variant",
-       title = paste0("Percent of BEC Variants conserved in\n", output$ecoregion_name[1], " ecoregion"))
+       title = paste0("Percent of BEC Variant x Ecoregion conserved")) +
+  theme(axis.text.y = element_text(size = 8)))
+
+comp_by_rep <- filter(tab_output, pa_type == "ppa") %>%
+  group_by(ecoregion_name) %>%
+  mutate(comp = tot_area / sum(tot_area) * 100)
+
+comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = comp, y = percent_prot)) +
+  geom_point(aes(text = bec_variant)) +
+  facet_wrap(vars(ecoregion_name)) +
+  labs(title = "Percent of BEC variant conserved in PPAs vs composition in Ecoregions",
+       x = "Percent variant composotion of ecoregion",
+       y = "Percent of variant conserved in ecoregion") +
+  theme_bw()
+
+comp_by_rep_plotly <- ggplotly(comp_by_rep_plot, tooltip = "text")
 
 sf_output <- ms_simplify(left, keep_shapes = TRUE) %>%
   left_join(
@@ -41,10 +61,13 @@ sf_output <- ms_simplify(left, keep_shapes = TRUE) %>%
 
 eco_rep_map <- ggplot(sf_output) +
   geom_sf(aes(fill = percent_prot_total), colour = NA) +
-  scale_fill_viridis_c()
+  scale_fill_viridis_c() +
+  labs(title = "Percent of BEC Variants conserved in Norther Columbia Mountains and\nThompson Okanagan Plateau ecoregions",
+       fill = "percent of BEC variant\nconserved in ecoregion")
 
 write_csv(tab_output, "out/ecoregion_variant_rep.csv")
 
-ggsave("out/ecoregion_variant_rep_bar.png", plot = eco_rep_barplot)
-ggsave("out/ecoregion_variant_rep_map.png", plot = eco_rep_map)
-
+ggsave("out/ecoregion_variant_rep_bar.png", plot = eco_rep_barplot, height = 10, width = 8)
+ggsave("out/ecoregion_variant_rep_map.png", plot = eco_rep_map, height = 10, width = 10)
+ggsave("out/ecoregion_variant_rep_by_comp_scatter.png", plot = comp_by_rep_plot, height = 8, width = 10)
+htmlwidgets::saveWidget(comp_by_rep_plotly, file = "out/comp_by_rep_plotly.html")
