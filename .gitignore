@@ -13,3 +13,6 @@ docs/*
 *.log
 backup*
 _targets/
+eco_rep_report.html
+eco_rep_report_cache
+eco_rep_report_files
