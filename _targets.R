@@ -37,8 +37,13 @@ clean_data <- list(
 
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
+  tar_target(ecoreg_sel, c("NCM", "TOP")),
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
-  tar_target(pa_bec_eco, intersect_pa(clean_pa, eco_bec))
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec)),
+  tar_target(eco_bec_multi,
+             group_eco_bec_to_multi(dplyr::filter(eco_bec, ecoregion_code %in% ecoreg_sel))),
+  tar_target(pa_eco_bec_multi,
+             group_pa_eco_bec_to_multi(dplyr::filter(pa_eco_bec, ecoregion_code %in% ecoreg_sel)))
 )
 
 # simplify spatial data  --------------------------------------------------
@@ -69,11 +74,12 @@ plot_data <- list(
 list(
   load_data,
   clean_data,
-  intersect_data
+  intersect_data,
   # simplify_data,
   # analyze_data,
   # plot_data
   #...
+  tar_render(report, "eco_rep_report.Rmd")
 )
 #add list(,
 #tar_targets() for each intermediate step of workflow)

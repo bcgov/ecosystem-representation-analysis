@@ -241,6 +241,20 @@ intersect_pa <- function(input1, input2){
   output
 }
 
+group_eco_bec_to_multi <- function(eco_bec) {
+  eco_bec %>%
+    mutate(eco_var_area = st_area(.)) %>%
+    group_by(ecoregion_code, ecoregion_name, zone, subzone, variant) %>%
+    summarise(tot_area = as.numeric(sum(eco_var_area)), is_coverage = TRUE)
+}
+
+group_pa_eco_bec_to_multi <- function(pa_eco_bec) {
+  pa_eco_bec %>%
+    mutate(pa_area = st_area(.)) %>%
+    group_by(ecoregion_code, ecoregion_name, zone, subzone, variant, pa_type) %>%
+    summarise(pa_area = as.numeric(sum(pa_area)))
+}
+
 # Simplify spatial data for visualization---------------------------------------------------
 
 # Run by region/zone
