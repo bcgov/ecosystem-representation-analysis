@@ -232,9 +232,12 @@ intersect_pa <- function(input1, input2){
     sf::st_precision(input1) <- 1e8
     sf::st_precision(input2) <- 1e8
   }
+  input1 <- st_make_valid(input1)
+  input2 <- st_make_valid(input2)
   output <- st_intersection(input1, input2) %>%
     st_make_valid() %>%
-    st_collection_extract(type = "POLYGON")
+    st_collection_extract(type = "POLYGON") %>%
+    mutate(polygon_id = seq_len(nrow(.)))
   output
 }
 
@@ -384,29 +387,27 @@ protected_area_totals<- function(data, eco_area_data){
   output
 }
 
-protected_area_by_bec<-function(bec_data, data){# Summarize by bec zone region
-  bec_totals <- bec_data %>%
-    mutate(area = as.numeric(st_area(geometry))) %>%
-    st_set_geometry(NULL) %>%
-    group_by(zone) %>%
-    summarize(total = sum(area) / 10000, .groups = "drop")
+protected_area_by_bec_eco <- function(bec_eco_data, data){# Summarize by bec zone region
+  bec_eco_totals <- bec_eco_data %>%
+    mutate(eco_var_area = as.numeric(st_area(.)))
+    # st_set_geometry(NULL)
+    # group_by(ecoregion_name, zone, subzone, variant, phase, map_label) %>%
+    # summarize(total_eco_var_area = sum(area) / 10000, .groups = "drop")
 
-  output <- data %>%
-    mutate(total_area = st_area(geometry)) %>%
-    st_set_geometry(NULL) %>%
-    group_by(zone, zone_name, park_type) %>%
-    summarize(sum_type_by_zone = as.numeric(sum(total_area) / 10000), .groups = "drop") %>%
-    group_by(zone_name) %>%
-    mutate(sum_zone = sum(sum_type_by_zone)) %>%
-    ungroup() %>%
-    left_join(bec_totals, by = "zone") %>%
-    mutate(perc_type_zone = sum_type_by_zone / total * 100,
-           perc_zone = sum_zone / total * 100) %>%
-    arrange(perc_zone) %>%
-    mutate(zone_name = str_replace_all(zone_name, "--", " — "),
-           zone_name = factor(zone_name, levels = unique(zone_name)))
 
-  write_rds(output, "out/bec_area.rds")
+  pa_data <- data %>%
+    mutate(prot_area = st_area(.)) %>%
+    st_set_geometry(NULL)
+    # group_by(ecoregion_name, zone, subzone, variant, pa_type) %>%
+    # summarize(eco_var_prot_area = as.numeric(sum(prot_area) / 10000), .groups = "drop") %>%    # summarize(eco_var_prot_area = as.numeric(sum(prot_area) / 10000), .groups = "drop") %>%
+
+  output <- left_join(bec_eco_totals,
+                      select(pa_data, pa_type, ecoregion_name, map_label, prot_area),
+                      by = c("ecoregion_name", "map_label"))
+    # mutate(perc_type_eco_var = eco_var_prot_area / total_eco_var_area * 100) %>%
+    # arrange(desc(perc_type_eco_var))
+
+  # write_rds(output, "out/bec_area.rds")
   output
 }
 

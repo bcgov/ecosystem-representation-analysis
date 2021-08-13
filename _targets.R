@@ -38,7 +38,7 @@ clean_data <- list(
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
-  tar_target(pa_bec_eco, st_intersection(clean_pa, eco_bec[eco_bec$ecoregion_code %in% c("NCM", "TOP"), ]))
+  tar_target(pa_bec_eco, intersect_pa(clean_pa, eco_bec))
 )
 
 # simplify spatial data  --------------------------------------------------
