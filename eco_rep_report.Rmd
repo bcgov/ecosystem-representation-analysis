@@ -12,13 +12,15 @@ source("packages.R")
 tar_load(c("clean_pa", "eco_bec_multi", "pa_eco_bec_multi"))
 ```
 
-```{r summary-barplot}
+```{r summary}
 tab_pa_eco_bec_summary <- st_drop_geometry(eco_bec_multi) %>%
   left_join(st_drop_geometry(pa_eco_bec_multi)) %>%
   mutate(percent_prot = as.numeric(pa_area / tot_area * 100),
          percent_prot = ifelse(is.na(percent_prot), 0, percent_prot),
          bec_variant = gsub("NA$", "", paste0(zone, subzone, variant)))
+```
 
+```{r summary-barplot}
 eco_rep_barplot <- ggplot(tab_pa_eco_bec_summary) +
   geom_col(aes(x = reorder_within(bec_variant, percent_prot, ecoregion_name, fun = sum), y = percent_prot, fill = pa_type)) +
   facet_grid(vars(ecoregion_name), scales = "free_y") +
