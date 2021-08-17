@@ -37,29 +37,29 @@ clean_data <- list(
 
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
-  tar_target(ecoreg_sel, c("NCM", "TOP")),
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
-  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec)),
-  tar_target(eco_bec_multi,
-             group_eco_bec_to_multi(dplyr::filter(eco_bec, ecoregion_code %in% ecoreg_sel))),
-  tar_target(pa_eco_bec_multi,
-             group_pa_eco_bec_to_multi(dplyr::filter(pa_eco_bec, ecoregion_code %in% ecoreg_sel)))
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec))
 )
 
 # simplify spatial data  --------------------------------------------------
 simplify_data <- list(
-  tar_target(map_eco, simplify_ecoregions(pa_eco)),
-  tar_target(map_bec, simplify_beczones(pa_bec)),
-  tar_target(map_eco_background, simplify_eco_background(ecoregions)),
-  tar_target(map_bec_background, simplify_bec_background())
+  tar_target(map_eco_background, simplify_background_map(clipped_eco, agg = c("ecoregion_code", "ecoregion_name"))),
+  tar_target(map_bec_background, simplify_background_map(clipped_bec, agg = c("zone", "subzone", "variant"))),
+  tar_target(map_eco_bec_background, simplify_background_map(eco_bec, agg = c("ecoregion_code", "ecoregion_name", "zone", "subzone", "variant")))
 )
 
 # analyze and prepare for visualization -----------------------------------
 analyze_data <- list(
-  # tar_target(ecoregion_totals, find_ecoregion_size(ecoregions)),
-  # tar_target(pa_eco_sum, protected_area_by_eco(pa_eco, ecoregion_totals)),
-  tar_target(pa_eco_bec_sum, protected_area_by_bec_eco(eco_bec, pa_bec_eco))
-  # tar_target(total_prot_area, protected_area_totals(pa_eco, pa_eco_sum))
+  tar_target(pa_eco_bec_summary,
+             pa_eco_bec %>%
+               mutate(area = as.numeric(st_area(.))) %>%
+               st_drop_geometry() %>%
+               group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, pa_type) %>%
+               summarise(area = sum(area))),
+  tar_target(pa_eco_bec_summary_wide,
+             pa_eco_bec_summary %>%
+               pivot_wider(names_from = pa_type, values_from = area))
+  # tar_target(map_eco_simp_results, join_attributes_to_map(map_eco_background, pa_eco_bec_summary_wide))
 )
 
 # supplemental bec zone plots ---------------------------------------------
@@ -75,11 +75,11 @@ list(
   load_data,
   clean_data,
   intersect_data,
-  # simplify_data,
-  # analyze_data,
+  simplify_data,
+  analyze_data
   # plot_data
   #...
-  tar_render(report, "eco_rep_report.Rmd")
+  # tar_render(report, "eco_rep_report.Rmd")
 )
 #add list(,
 #tar_targets() for each intermediate step of workflow)

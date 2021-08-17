@@ -255,6 +255,13 @@ group_pa_eco_bec_to_multi <- function(pa_eco_bec) {
     summarise(pa_area = as.numeric(sum(pa_area)))
 }
 
+group_pa_bec_to_multi <- function(pa_eco_bec) {
+  pa_eco_bec %>%
+    mutate(pa_area = st_area(.)) %>%
+    group_by(zone, subzone, variant, pa_type) %>%
+    summarise(pa_area = as.numeric(sum(pa_area)))
+}
+
 # Simplify spatial data for visualization---------------------------------------------------
 
 # Run by region/zone
@@ -279,29 +286,44 @@ simplify_ecoregions<- function(data){# Simplify ecoregions for plotting  ---
   output
 }
 
-simplify_beczones<-function(data){# Simplify bec zones for plotting  ---
-  geojson_write(data, file = "data/pa_bec.geojson")
+#' Simplify a map for plotting, optionally aggregating to MULTIPOLYGON
+#'
+#' Before simplification, accurate area is obtained so even though
+#' boundaries are not 100% accurate, areas are
+#'
+#' @param sf object
+#' @param keep proportion of vertices to keep (passed to rmapshaper::ms_simplify)
+#' @param agg optional character vector of columns to aggregate by
+#' @param ... passed on to summarise.sf() (e.g., `do_union = FALSE` or `is_coverage = TRUE`)
+#'
+#' @return simplified (and possibly aggregated) version of `data`
+#' @export
+simplify_background_map <- function(data, keep = 0.05, agg = NULL, ...){# Simplify bec zones for plotting  ---
+  data$area <- st_area(data)
+  output <- rmapshaper::ms_simplify(data, keep = keep, keep_shapes = TRUE, sys = TRUE) %>%
+    st_make_valid() %>%
+    st_collection_extract("POLYGON")
 
-  system(glue("mapshaper-xl data/pa_bec.geojson ",
-              "-simplify 5% keep-shapes ",
-              "-o out/CPCAD_Dec2020_bec_simp.geojson"))
-  output<-st_read("out/CPCAD_Dec2020_bec_simp.geojson", crs=3005) # geojson doesn't have CRS so have to remind R that CRS is BC Albers
+  if (!is.null(agg)) {
+    output <- group_by(output, across(all_of(agg))) %>%
+      summarise(total_area = sum(area), ...)
+  }
   output
 }
 
-simplify_eco_background<- function(data){# Simplify ecoregions background map ---
-  output<- ms_simplify(data, keep = 0.01)
-  write_rds(output, "out/eco_simp.rds")
-  output
-}
-
-simplify_bec_background<-function(){# Simplify bec zones background map ---
-  system(glue("mapshaper-xl data/bec_clipped.geojson ",
-              "-simplify 1% keep-shapes ",
-              "-o out/bec_simp.geojson"))
-  output<-st_read("out/bec_simp.geojson", crs=3005) # geojson doesn't have CRS so have to remind R that CRS is BC Albers
-  output
-}
+# simplify_eco_background<- function(data){# Simplify ecoregions background map ---
+#   output<- ms_simplify(data, keep = 0.01)
+#   write_rds(output, "out/eco_simp.rds")
+#   output
+# }
+#
+# simplify_bec_background<-function(){# Simplify bec zones background map ---
+#   system(glue("mapshaper-xl data/bec_clipped.geojson ",
+#               "-simplify 1% keep-shapes ",
+#               "-o out/bec_simp.geojson"))
+#   output<-st_read("out/bec_simp.geojson", crs=3005) # geojson doesn't have CRS so have to remind R that CRS is BC Albers
+#   output
+# }
 
 # Calculate ecoregion and bec zone protected areas ------------------------
 
@@ -354,50 +376,6 @@ protected_area_by_eco <- function(data, eco_totals){
     arrange(desc(type), p_type) %>%
     mutate(ecoregion_name = factor(ecoregion_name, levels = unique(ecoregion_name)))
   write_rds(output, "out/pa_eco_sum.rds")
-  output
-}
-
-protected_area_totals<- function(data, eco_area_data){
-  pa_eco_all_df <- data %>%
-    mutate(total_area = st_area(geometry),
-           total_area = set_units(total_area, km^2),
-           d_max = max(date, na.rm = TRUE)) %>%
-    st_set_geometry(NULL) %>%
-    # Add placeholder for missing dates for plots (max year plus 1)
-    mutate(d_max = max(date, na.rm = TRUE),
-           missing = is.na(date),
-           date = if_else(is.na(date), d_max + 1L, date)) %>%
-    group_by(park_type, type) %>%
-    # Fill in missing dates all the way to present plus 1 year (ensures plots go to present smoothly)
-    complete(date = seq(min(date, na.rm = TRUE), d_max[1]),
-             fill = list(total_area = 0, missing = FALSE)) %>%
-    ungroup() %>%
-    group_by(date) %>%
-    complete(type = c("land", "water"), park_type = c("OECM", "PPA"),
-             fill = list(total_area = 0, missing = FALSE)) %>%
-    group_by(park_type, type, missing, date) %>%
-    summarize(total_area = as.numeric(sum(total_area)), .groups = "drop") %>%
-    group_by(park_type, type) %>%
-    arrange(date, .by_group = TRUE) %>%
-    mutate(cum_type = cumsum(total_area),
-           total_type = sum(total_area))
-
-  bc_water_total<- eco_area_data %>%
-    group_by(ecoregion_name) %>%
-    slice_head(n=1) %>%
-    ungroup() %>%
-    dplyr::filter(type=="water") %>%
-    summarize(bc_water_total = sum(total_ecoregion_by_type))
-
-  output <- pa_eco_all_df %>%
-    mutate(bc_total_area = case_when(type=="water" ~ bc_water_total$bc_water_total/1000000,
-                                     type=="land" ~ bcmaps::bc_area())) %>%
-    group_by(date, park_type, type) %>%
-    arrange(date, .by_group = TRUE) %>%
-    mutate(perc_year_type = total_area/bc_total_area*100,
-           cum_year_type = cum_type/bc_total_area*100,
-           summary_total = total_type/bc_total_area*100)
-  write_rds(output, "out/total_prot_area.rds")
   output
 }
 
