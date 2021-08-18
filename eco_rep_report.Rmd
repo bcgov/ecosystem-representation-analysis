@@ -6,23 +6,19 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, fig.width = 10, fig.height = 10, warning = FALSE, message = FALSE)
 source("packages.R")
+conflicted::conflict_prefer("filter", "dplyr")
+ecoregion_subset <- c("NCM", "TOP")
 ```
 
 ```{r tar-load}
-tar_load(c("clean_pa", "eco_bec_multi", "pa_eco_bec_multi"))
+tar_load(c("clean_pa", "map_eco_bec_background", "pa_eco_bec_summary"))
 ```
 
-```{r summary}
-tab_pa_eco_bec_summary <- st_drop_geometry(eco_bec_multi) %>%
-  left_join(st_drop_geometry(pa_eco_bec_multi)) %>%
-  mutate(percent_prot = as.numeric(pa_area / tot_area * 100),
-         percent_prot = ifelse(is.na(percent_prot), 0, percent_prot),
-         bec_variant = gsub("NA$", "", paste0(zone, subzone, variant)))
-```
+
 
 ```{r summary-barplot}
-eco_rep_barplot <- ggplot(tab_pa_eco_bec_summary) +
-  geom_col(aes(x = reorder_within(bec_variant, percent_prot, ecoregion_name, fun = sum), y = percent_prot, fill = pa_type)) +
+eco_rep_barplot <- ggplot(dplyr::filter(pa_eco_bec_summary, ecoregion_code %in% ecoregion_subset)) +
+  geom_col(aes(x = reorder_within(bec_variant, percent_conserved, ecoregion_name, fun = sum), y = percent_conserved, fill = pa_type)) +
   facet_grid(vars(ecoregion_name), scales = "free_y") +
   coord_flip() +
   scale_fill_discrete(na.translate = FALSE) +

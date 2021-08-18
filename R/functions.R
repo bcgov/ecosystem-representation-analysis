@@ -288,8 +288,6 @@ simplify_ecoregions<- function(data){# Simplify ecoregions for plotting  ---
 
 #' Simplify a map for plotting, optionally aggregating to MULTIPOLYGON
 #'
-#' Before simplification, accurate area is obtained so even though
-#' boundaries are not 100% accurate, areas are
 #'
 #' @param sf object
 #' @param keep proportion of vertices to keep (passed to rmapshaper::ms_simplify)
@@ -299,14 +297,15 @@ simplify_ecoregions<- function(data){# Simplify ecoregions for plotting  ---
 #' @return simplified (and possibly aggregated) version of `data`
 #' @export
 simplify_background_map <- function(data, keep = 0.05, agg = NULL, ...){# Simplify bec zones for plotting  ---
-  data$area <- st_area(data)
+
+  data <- st_cast(data, "POLYGON")
   output <- rmapshaper::ms_simplify(data, keep = keep, keep_shapes = TRUE, sys = TRUE) %>%
     st_make_valid() %>%
     st_collection_extract("POLYGON")
 
   if (!is.null(agg)) {
     output <- group_by(output, across(all_of(agg))) %>%
-      summarise(total_area = sum(area), ...)
+      summarise()
   }
   output
 }
