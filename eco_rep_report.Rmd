@@ -3,20 +3,174 @@ title: "Ecosystem Representation in BC Conserved and Protected Areas"
 output: html_document
 ---
 
+<style type="text/css">
+  body{
+  font-size: 20pt;
+}
+</style>
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, fig.width = 10, fig.height = 10, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, fig.width = 10, fig.height = 8, warning = FALSE, message = FALSE)
 source("packages.R")
 conflicted::conflict_prefer("filter", "dplyr")
 ecoregion_subset <- c("NCM", "TOP")
+
+geom_bc <- geom_sf(data = bc_bound(), fill = NA, size = 0.2)
 ```
 
 ```{r tar-load}
-tar_load(c("clean_pa", "map_eco_bec_background", "pa_eco_bec_summary"))
+tar_load(c("map_pa_background", "map_eco_bec_background", "pa_eco_bec_summary", "pa_eco_bec_summary_wide", 
+           "map_bec_background", "pa_bec_summary_wide", "map_eco_background"))
+```
+
+- Protected Area coverage of BGC Variants (207) and Ecoregions (47)
+- 789 unique combinations of BGC Variants x Ecoregions
+- Protected Areas = Canadian Protected and Conserved Areas Database
+  - Parks and Protected Areas + OECMs
+  - Mostly only looked at PPAs
+
+```{r prov-bec-rep-map}
+prov_bec_summary_sf <- map_bec_background %>% 
+  left_join(pa_bec_summary_wide, by = c("zone", "subzone", "variant"))
+
+ggplot() + 
+  geom_bc + 
+  geom_sf(data = prov_bec_summary_sf, mapping = aes(fill = percent_conserved_ppa), colour = NA) +
+  scale_fill_viridis_c() + 
+  labs(title = "Representation of BEC variants in B.C. Parks and Protected Areas", 
+       fill = "Percent of variant protected") + 
+  theme_minimal()
+```
+
+```{r bec-comp-vs-rep-scatter}
+comp_by_rep_bec <- dplyr::filter(pa_bec_summary_wide)
+
+bec_cols <- bec_colours()[unique(comp_by_rep_bec$zone)]
+
+p <- ggplot(comp_by_rep_bec, aes(x = percent_comp_prov, y = percent_conserved_ppa, colour = zone)) +
+  geom_point(aes(text = bec_variant)) +
+    scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
+  labs(title = "Percent of BGC variant conserved in PPAs vs Composition in B.C.",
+       x = "Percent variant composotion in B.C.",
+       y = "Percent of variant conserved in B.C.", 
+       colour = "BGC Zone") +
+  theme_bw()
+
+ggplotly(p, tooltip = "text")
+```
+
+Questions:
+
+- What threshold do we set for representation?
+- Even representation vs higher level of conservation for rare variants?
+
+```{r ecoregion-var-facet-scatter}
+comp_by_rep <- dplyr::filter(pa_eco_bec_summary, pa_type == "ppa", 
+                             ecoregion_code %in% ecoregion_subset)
+
+bec_cols <- bec_colours()[unique(comp_by_rep$zone)]
+
+comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = percent_comp_ecoregion, y = percent_conserved, colour = zone)) +
+  geom_point(aes(text = bec_variant)) +
+    scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) +
+  facet_wrap(vars(ecoregion_name)) +
+  labs(title = "Percent of BEC variant conserved in PPAs vs composition in two selected Ecoregions",
+       x = "Percent variant composotion of ecoregion",
+       y = "Percent of variant conserved in ecoregion", 
+       colour = "BGC Zone") +
+  theme_bw()
+
+ggplotly(comp_by_rep_plot, tooltip = "text")
+```
+
+Variants can be spread widely across the province, so we intersect with Ecoregions to 
+try to achieve regional as well as ecological representation
+
+```{r map-eco-bec-subset}
+map_eco_bec <- map_eco_bec_background %>%
+  left_join(pa_eco_bec_summary_wide, 
+            by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant")) %>%
+  filter(ecoregion_code %in% ecoregion_subset)
+```
+
+```{r eco-rep-map-subset}
+eco_rep_map <- ggplot() +
+  geom_bc + 
+  geom_sf(data = map_eco_bec, mapping = aes(fill = percent_conserved_ppa), colour = NA) +
+  scale_fill_viridis_c() +
+  labs(title = "Percent of BEC Variants protected in Northern Columbia Mountains and\nThompson Okanagan Plateau ecoregions",
+       fill = "percent of BEC variant\n in ecoregion") + 
+  theme_minimal()
+
+eco_rep_map
+```
+
+```{r eco-rep-map-subset-with-pa, cache=TRUE}
+eco_var_rep_map_with_pa <- eco_rep_map +
+  geom_sf(data = map_pa_background, mapping = aes(colour = pa_type), alpha = 0.4, size = 0.2) +
+  coord_sf(xlim = st_bbox(map_eco_bec)[c(1,3)], ylim = st_bbox(map_eco_bec)[c(2,4)]) +
+  labs(colour = "Conserved area type") +
+  theme_minimal()
+
+eco_var_rep_map_with_pa
 ```
 
 
+```{r prov-eco-bec-rep-map}
+prov_eco_bec_summary_sf <- map_eco_bec_background %>% 
+  left_join(pa_eco_bec_summary_wide, 
+            by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant"))
 
-```{r summary-barplot}
+ggplot() + 
+  geom_bc + 
+  geom_sf(data = prov_eco_bec_summary_sf, aes(fill = percent_conserved_ppa), colour = NA) +
+  geom_sf(data = map_eco_background, fill = NA, colour = "grey80", size = 0.2) + 
+  scale_fill_viridis_c() + 
+  labs(title = "Representation of BEC variants x Ecoregions\n in B.C. Parks and Protected Areas", 
+       fill = "Percent of BGC VariantxEcoregion\nprotected") + 
+  theme_minimal()
+```
+
+Due to intersection of variants with ecoregions we can create slivers of a variant within an ecoregion, 
+leading to artificial rarity - need to balance local rarity/representation vs provincial.
+
+```{r eco-bec-comp-vs-rep-scatter}
+comp_by_rep_eco_bec <- dplyr::filter(pa_eco_bec_summary_wide)
+
+bec_cols <- bec_colours()[unique(comp_by_rep_eco_bec$zone)]
+
+p <- ggplot(comp_by_rep_eco_bec, 
+            aes(x = percent_comp_ecoregion, y = percent_conserved_ppa, colour = zone)) +
+  geom_point(aes(text = paste0(ecoregion_name, "*", bec_variant))) +
+    scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
+  labs(title = "Percent of BEC Variant x Ecoregion conserved in PPAs vs Composition",
+       x = "Percent variant x ecoregion composotion in B.C.",
+       y = "Percent of variant x ecoregion conserved in B.C.") +
+  theme_bw()
+
+ggplotly(p, tooltip = "text")
+```
+
+```{r underrep-eco-bec-map}
+rare_variants <- filter(pa_bec_summary_wide, 
+                        percent_comp_prov < quantile(percent_comp_prov, .1))
+
+ggplot() + 
+  geom_bc + 
+  geom_sf(
+    data = prov_eco_bec_summary_sf %>% 
+      filter(percent_conserved_ppa < 15, 
+             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+    aes(fill = percent_conserved_ppa), colour = NA
+  ) +
+  scale_fill_viridis_c() + 
+  labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas", 
+       caption = "Ecoregions*Variants with < 15% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+       fill = "Percent protected") + 
+  theme_minimal()
+```
+
+```{r summary-barplot, eval=FALSE}
 eco_rep_barplot <- ggplot(dplyr::filter(pa_eco_bec_summary, ecoregion_code %in% ecoregion_subset)) +
   geom_col(aes(x = reorder_within(bec_variant, percent_conserved, ecoregion_name, fun = sum), y = percent_conserved, fill = pa_type)) +
   facet_grid(vars(ecoregion_name), scales = "free_y") +
@@ -29,53 +183,3 @@ eco_rep_barplot <- ggplot(dplyr::filter(pa_eco_bec_summary, ecoregion_code %in% 
 eco_rep_barplot
 ```
 
-```{r}
-comp_by_rep <- dplyr::filter(tab_pa_eco_bec_summary, pa_type == "ppa") %>%
-  group_by(ecoregion_name) %>%
-  mutate(comp = tot_area / sum(tot_area) * 100)
-
-bec_cols <- bec_colours()[unique(comp_by_rep$zone)]
-
-comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = comp, y = percent_prot, colour = zone)) +
-  geom_point(aes(text = bec_variant)) +
-    scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) +
-  facet_wrap(vars(ecoregion_name)) +
-  labs(title = "Percent of BEC variant conserved in PPAs vs composition in Ecoregions",
-       x = "Percent variant composotion of ecoregion",
-       y = "Percent of variant conserved in ecoregion") +
-  theme_bw()
-
-ggplotly(comp_by_rep_plot, tooltip = "text")
-```
-
-```{r sf-output, cache=TRUE}
-sf_output <- ms_simplify(eco_bec_multi, keep_shapes = TRUE) %>%
-  left_join(
-      pivot_wider(st_drop_geometry(pa_eco_bec_multi), names_from = pa_type, values_from = pa_area)
-    ) %>%
-  mutate(percent_prot_ppa = replace_na(as.numeric(ppa / tot_area * 100), 0),
-         percent_prot_oecm = replace_na(as.numeric(oecm / tot_area * 100), 0),
-         percent_prot_total = percent_prot_ppa + percent_prot_oecm,
-         percent_prot_total = ifelse(is.na(percent_prot_total), 0, percent_prot_total),
-         bec_variant = gsub("NA$", "", paste0(zone, subzone, variant)))
-```
-
-```{r eco-rep-map}
-eco_rep_map <- ggplot() +
-  geom_sf(data = sf_output, mapping = aes(fill = percent_prot_total), colour = NA) +
-  scale_fill_viridis_c() +
-  labs(title = "Percent of BEC Variants conserved in Norther Columbia Mountains and\nThompson Okanagan Plateau ecoregions",
-       fill = "percent of BEC variant\nconserved in ecoregion") + 
-  theme_minimal()
-
-eco_rep_map
-```
-
-```{r eco-rep-map-with-pa}
-eco_var_rep_map_with_pa <- eco_rep_map +
-  geom_sf(data = clean_pa, mapping = aes(colour = pa_type), alpha = 0.4, size = 0.5) +
-  coord_sf(xlim = st_bbox(sf_output)[c(1,3)], ylim = st_bbox(sf_output)[c(2,4)]) +
-  theme_minimal()
-
-eco_var_rep_map_with_pa
-```
