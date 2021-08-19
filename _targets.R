@@ -15,8 +15,8 @@ library(tarchetypes)
 source("packages.R")
 source("R/functions.R")
 
-conflicted::conflict_prefer("filter", "dplyr")
-future::plan(future::multisession, workers = 2)
+conflict_prefer("filter", "dplyr")
+plan(callr)
 
 #tar_option_set(packages=c("dplyr", "tidyr", "readr", "purrr", "stringr", "ggplot2",
 #                          "lubridate", "glue", "assertr", "sf", "bcmaps", "bcdata",
@@ -42,7 +42,8 @@ clean_data <- list(
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
-  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec))
+  tar_target(eco_bec_clipped, clip_to_bc_boundary(eco_bec, simplify = FALSE)),
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped))
 )
 
 # simplify spatial data  --------------------------------------------------
@@ -53,20 +54,21 @@ simplify_data <- list(
   # lots of empty geometries and invalid topologies
   tar_target(map_eco_bec_background, intersect_pa(map_eco_background, map_bec_background) %>%
     group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
-    summarise())
+    summarise()),
+  tar_target(map_pa_background, simplify_background_map(clean_pa, keep = 0.2))
 )
 
 # analyze and prepare for visualization -----------------------------------
 analyze_data <- list(
   tar_target(eco_bec_summary,
-             eco_bec %>%
+             eco_bec_clipped %>%
                mutate(area = as.numeric(st_area(.))) %>%
                st_drop_geometry() %>%
                group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
                summarise(bec_eco_area = sum(area), .groups = "drop") %>%
                mutate(percent_comp_prov = bec_eco_area / sum(bec_eco_area) * 100) %>%
                group_by(ecoregion_code) %>%
-               mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area))),
+               mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)),
   tar_target(pa_eco_bec_summary,
              eco_bec_summary %>%
                left_join(
@@ -129,10 +131,10 @@ list(
   clean_data,
   intersect_data,
   simplify_data,
-  analyze_data
+  analyze_data,
   # plot_data
   #...
-  # tar_render(report, "eco_rep_report.Rmd")
+  tar_render(report, "eco_rep_report.Rmd")
 )
 #add list(,
 #tar_targets() for each intermediate step of workflow)
