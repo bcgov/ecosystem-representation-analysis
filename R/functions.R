@@ -298,8 +298,7 @@ simplify_ecoregions<- function(data){# Simplify ecoregions for plotting  ---
 #' @export
 simplify_background_map <- function(data, keep = 0.05, agg = NULL, ...){# Simplify bec zones for plotting  ---
 
-  data <- st_cast(data, "POLYGON")
-  output <- rmapshaper::ms_simplify(data, keep = keep, keep_shapes = TRUE, sys = TRUE) %>%
+  output <- rmapshaper::ms_simplify(data, keep = keep, keep_shapes = TRUE, explode = TRUE, sys = TRUE) %>%
     st_make_valid() %>%
     st_collection_extract("POLYGON")
 
