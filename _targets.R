@@ -55,7 +55,7 @@ simplify_data <- list(
   tar_target(map_eco_bec_background, intersect_pa(map_eco_background, map_bec_background) %>%
     group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
     summarise()),
-  tar_target(map_pa_background, simplify_background_map(clean_pa, keep = 0.2))
+  tar_target(map_pa_background, simplify_background_map(clean_pa))
 )
 
 # analyze and prepare for visualization -----------------------------------
