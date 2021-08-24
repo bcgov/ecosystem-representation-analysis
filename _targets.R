@@ -134,7 +134,8 @@ list(
   analyze_data,
   # plot_data
   #...
-  tar_render(report, "eco_rep_report.Rmd")
+  tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
+  tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
 )
 #add list(,
 #tar_targets() for each intermediate step of workflow)

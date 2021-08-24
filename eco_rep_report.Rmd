@@ -16,6 +16,9 @@ conflicted::conflict_prefer("filter", "dplyr")
 ecoregion_subset <- c("NCM", "TOP")
 
 geom_bc <- geom_sf(data = bc_bound(), fill = NA, size = 0.2)
+
+is_html <- knitr::is_html_output()
+is_pdf <- knitr::is_latex_output()
 ```
 
 ```{r tar-load}
@@ -56,7 +59,7 @@ p <- ggplot(comp_by_rep_bec, aes(x = percent_comp_prov, y = percent_conserved_pp
        colour = "BGC Zone") +
   theme_bw()
 
-ggplotly(p, tooltip = "text")
+if (is_html) ggplotly(p, tooltip = "text") else p
 ```
 
 Questions:
@@ -80,7 +83,7 @@ comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = percent_comp_ecoregion, y = perc
        colour = "BGC Zone") +
   theme_bw()
 
-ggplotly(comp_by_rep_plot, tooltip = "text")
+if (is_html) ggplotly(comp_by_rep_plot, tooltip = "text") else comp_by_rep_plot
 ```
 
 Variants can be spread widely across the province, so we intersect with Ecoregions to 
@@ -148,7 +151,7 @@ p <- ggplot(comp_by_rep_eco_bec,
        y = "Percent of variant x ecoregion conserved in B.C.") +
   theme_bw()
 
-ggplotly(p, tooltip = "text")
+if (is_html) ggplotly(p, tooltip = "text") else p
 ```
 
 ```{r underrep-eco-bec-map}
