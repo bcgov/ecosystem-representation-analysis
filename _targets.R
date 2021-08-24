@@ -55,7 +55,10 @@ simplify_data <- list(
   tar_target(map_eco_bec_background, intersect_pa(map_eco_background, map_bec_background) %>%
     group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
     summarise()),
-  tar_target(map_pa_background, simplify_background_map(clean_pa))
+  # Just use rmapshaper::ms_simplify due to bug in sf: https://github.com/r-spatial/sf/issues/1767
+  tar_target(map_pa_background, rmapshaper::ms_simplify(clean_pa, keep = 0.05, keep_shapes = TRUE, explode = TRUE, sys = TRUE) %>%
+               st_make_valid())
+  # tar_target(map_pa_background, simplify_background_map(clean_pa))
 )
 
 # analyze and prepare for visualization -----------------------------------
