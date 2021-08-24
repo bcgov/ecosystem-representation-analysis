@@ -62,7 +62,7 @@ simplify_data <- list(
 )
 
 # analyze and prepare for visualization -----------------------------------
-analyze_data <- list(
+summarise_data <- list(
   tar_target(eco_bec_summary,
              eco_bec_clipped %>%
                mutate(area = as.numeric(st_area(.))) %>%
@@ -119,6 +119,11 @@ analyze_data <- list(
 )
 
 
+# Analyze data --------------------------------------
+
+
+
+
 # Save csv outputs ----------------------------------
 
 save_csvs <- list(
@@ -127,6 +132,7 @@ save_csvs <- list(
 
 
 # supplemental bec zone plots ---------------------------------------------
+# **** currently not being used - plots are created in Rmd ****
 plot_data <- list(
   tar_target(bec_plot_type, plot_by_bec_zone(pa_bec_sum)),
   tar_target(bec_plot_total, plot_bec_zone_totals(pa_bec_sum)),
@@ -134,15 +140,15 @@ plot_data <- list(
   tar_target(bc_button, create_bc_button())
 )
 
+
 # targets pipeline --------------------------------------------------------
 list(
   load_datasets,
   clean_data,
   intersect_data,
   simplify_data,
-  analyze_data,
-  # plot_data
-  #...
+  summarise_data,
+  # plot_data,
   save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
