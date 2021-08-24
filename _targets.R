@@ -119,6 +119,12 @@ analyze_data <- list(
 )
 
 
+# Save csv outputs ----------------------------------
+
+save_csvs <- list(
+  tar_target(eco_bec_summary_csv, write_csv_data(eco_bec_summary), format = "file")
+)
+
 
 # supplemental bec zone plots ---------------------------------------------
 plot_data <- list(
@@ -137,6 +143,7 @@ list(
   analyze_data,
   # plot_data
   #...
+  save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
 )

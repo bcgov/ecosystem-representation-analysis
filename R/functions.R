@@ -623,3 +623,11 @@ eco_bar <- function(data){
   ggsave("out/eco_bar_all.png", combined, width = 9, height = 9, dpi = 300)
   combined
 }
+
+write_csv_data <- function(x, dir = "out/data_summaries") {
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  nm <- deparse(substitute(x))
+  path <- file.path(dir, paste0(nm, ".csv"))
+  readr::write_csv(x, path)
+  path
+}
