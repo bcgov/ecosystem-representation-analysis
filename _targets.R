@@ -26,7 +26,7 @@ plan(callr)
 
 # load datasets ------------------------------------------------------------------------------------
 
-load_data <- list(
+load_datasets <- list(
   tar_target(pa_data, get_cpcad_bc_data()),
   tar_target(ecoregions, load_ecoregions()),
   tar_target(bec, load_bec())
@@ -127,7 +127,7 @@ plot_data <- list(
 
 # targets pipeline --------------------------------------------------------
 list(
-  load_data,
+  load_datasets,
   clean_data,
   intersect_data,
   simplify_data,
