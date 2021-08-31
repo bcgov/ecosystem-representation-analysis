@@ -39,6 +39,7 @@ prov_bec_summary_sf <- map_bec_background %>%
 ggplot() + 
   geom_bc + 
   geom_sf(data = prov_bec_summary_sf, mapping = aes(fill = percent_conserved_ppa), colour = NA) +
+  #geom_sf(data = map_pa_background, fill="white", alpha = 0.4) +
   scale_fill_viridis_c() + 
   labs(title = "Representation of BEC variants in B.C. Parks and Protected Areas", 
        fill = "Percent of variant protected") + 
@@ -54,7 +55,7 @@ p <- ggplot(comp_by_rep_bec, aes(x = percent_comp_prov, y = percent_conserved_pp
   geom_point(aes(text = bec_variant)) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
   labs(title = "Percent of BGC variant conserved in PPAs vs Composition in B.C.",
-       x = "Percent variant composotion in B.C.",
+       x = "Percent variant composition in B.C.",
        y = "Percent of variant conserved in B.C.", 
        colour = "BGC Zone") +
   theme_bw()
@@ -62,10 +63,7 @@ p <- ggplot(comp_by_rep_bec, aes(x = percent_comp_prov, y = percent_conserved_pp
 if (is_html) ggplotly(p, tooltip = "text") else p
 ```
 
-Questions:
-
-- What threshold do we set for representation?
-- Even representation vs higher level of conservation for rare variants?
+Variants can be spread widely across the province, and looking at the provincial variant analysis does not provide information about where greater protection of a variant should occur - to achieve this we intersected with Ecoregions 
 
 ```{r ecoregion-var-facet-scatter}
 comp_by_rep <- dplyr::filter(pa_eco_bec_summary, pa_type == "ppa", 
@@ -78,7 +76,7 @@ comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = percent_comp_ecoregion, y = perc
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) +
   facet_wrap(vars(ecoregion_name)) +
   labs(title = "Percent of BEC variant conserved in PPAs vs composition in two selected Ecoregions",
-       x = "Percent variant composotion of ecoregion",
+       x = "Percent variant composition of ecoregion",
        y = "Percent of variant conserved in ecoregion", 
        colour = "BGC Zone") +
   theme_bw()
@@ -86,8 +84,7 @@ comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = percent_comp_ecoregion, y = perc
 if (is_html) ggplotly(comp_by_rep_plot, tooltip = "text") else comp_by_rep_plot
 ```
 
-Variants can be spread widely across the province, so we intersect with Ecoregions to 
-try to achieve regional as well as ecological representation
+
 
 ```{r map-eco-bec-subset}
 map_eco_bec <- map_eco_bec_background %>%
@@ -110,7 +107,7 @@ eco_rep_map
 
 ```{r eco-rep-map-subset-with-pa, cache=TRUE}
 eco_var_rep_map_with_pa <- eco_rep_map +
-  geom_sf(data = map_pa_background, mapping = aes(colour = pa_type), alpha = 0.4, size = 0.2) +
+  geom_sf(data = map_pa_background, fill="white", alpha = 0.4, size = 0.2) +
   coord_sf(xlim = st_bbox(map_eco_bec)[c(1,3)], ylim = st_bbox(map_eco_bec)[c(2,4)]) +
   labs(colour = "Conserved area type") +
   theme_minimal()
@@ -134,10 +131,16 @@ ggplot() +
   theme_minimal()
 ```
 
+Questions:
+
+- What thresholds do we set for representation for different conservation scenarios?
+- Even representation vs higher level of conservation for rare variants?
+
 Due to intersection of variants with ecoregions we can create slivers of a variant within an ecoregion, 
 leading to artificial rarity - need to balance local rarity/representation vs provincial.
 
-```{r eco-bec-comp-vs-rep-scatter}
+
+```{r eco-bec-comp-vs-rep-scatter, eval=FALSE}
 comp_by_rep_eco_bec <- dplyr::filter(pa_eco_bec_summary_wide)
 
 bec_cols <- bec_colours()[unique(comp_by_rep_eco_bec$zone)]
@@ -147,7 +150,7 @@ p <- ggplot(comp_by_rep_eco_bec,
   geom_point(aes(text = paste0(ecoregion_name, "*", bec_variant))) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
   labs(title = "Percent of BEC Variant x Ecoregion conserved in PPAs vs Composition",
-       x = "Percent variant x ecoregion composotion in B.C.",
+       x = "Percent variant x ecoregion composition in B.C.",
        y = "Percent of variant x ecoregion conserved in B.C.") +
   theme_bw()
 
@@ -157,7 +160,6 @@ if (is_html) ggplotly(p, tooltip = "text") else p
 ```{r underrep-eco-bec-map}
 rare_variants <- filter(pa_bec_summary_wide, 
                         percent_comp_prov < quantile(percent_comp_prov, .1))
-
 ggplot() + 
   geom_bc + 
   geom_sf(
@@ -172,6 +174,60 @@ ggplot() +
        fill = "Percent protected") + 
   theme_minimal()
 ```
+
+```{r underrep-eco-bec-map-1.5}
+
+ggplot() + 
+  geom_bc + 
+  geom_sf(
+    data = prov_eco_bec_summary_sf %>% 
+      filter(percent_conserved_ppa < 15, 
+             (percent_comp_ecoregion > 1.5 | bec_variant %in% rare_variants$bec_variant )), 
+    aes(fill = percent_conserved_ppa), colour = NA
+  ) +
+  scale_fill_viridis_c() + 
+  labs(title = "<15% protected, >1.5% composition", 
+       caption = "Ecoregions*Variants with < 15% protected,\nwhere the variant makes up at least 1.5% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+       fill = "Percent protected") + 
+  theme_minimal()
+```
+
+
+```{r underrep-eco-bec-map-25}
+
+ggplot() + 
+  geom_bc + 
+  geom_sf(
+    data = prov_eco_bec_summary_sf %>% 
+      filter(percent_conserved_ppa < 25, 
+             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+    aes(fill = percent_conserved_ppa), colour = NA
+  ) +
+  #geom_sf(data=map_pa_background, fill="white")+
+  scale_fill_viridis_c() + 
+  labs(title = "<25% protected, >3% composition", 
+       caption = "Ecoregions*Variants with < 25% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+       fill = "Percent protected") + 
+  theme_minimal()
+```
+
+```{r underrep-eco-bec-map-30}
+
+ggplot() + 
+  geom_bc + 
+  geom_sf(
+    data = prov_eco_bec_summary_sf %>% 
+      filter(percent_conserved_ppa < 30, 
+             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+    aes(fill = percent_conserved_ppa), colour = NA
+  ) +
+  scale_fill_viridis_c() + 
+  labs(title = "<30% protected, >3% composition", 
+       caption = "Ecoregions*Variants with < 30% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+       fill = "Percent protected") + 
+  theme_minimal()
+```
+
 
 ```{r summary-barplot, eval=FALSE}
 eco_rep_barplot <- ggplot(dplyr::filter(pa_eco_bec_summary, ecoregion_code %in% ecoregion_subset)) +
