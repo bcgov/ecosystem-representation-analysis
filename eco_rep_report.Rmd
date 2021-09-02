@@ -139,6 +139,8 @@ Questions:
 Due to intersection of variants with ecoregions we can create slivers of a variant within an ecoregion, 
 leading to artificial rarity - need to balance local rarity/representation vs provincial.
 
+![Combining ecoregion and provincial analysis](representation-analysis_conceptual-diagram.png)
+
 
 ```{r eco-bec-comp-vs-rep-scatter, eval=FALSE}
 comp_by_rep_eco_bec <- dplyr::filter(pa_eco_bec_summary_wide)

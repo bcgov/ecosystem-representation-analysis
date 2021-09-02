@@ -241,6 +241,16 @@ intersect_pa <- function(input1, input2){
   output
 }
 
+remove_pa <- function(data1, data2){
+  output <- st_difference(data1, data2) %>%
+   st_make_valid() %>%
+    st_collection_extract(type = "POLYGON") %>%
+   mutate(polygon_id = seq_len(nrow(.)))
+
+  output
+}
+
+
 group_eco_bec_to_multi <- function(eco_bec) {
   eco_bec %>%
     mutate(eco_var_area = st_area(.)) %>%
@@ -631,3 +641,36 @@ write_csv_data <- function(x, dir = "out/data_summaries") {
   readr::write_csv(x, path)
   path
 }
+
+# sensitivity analysis
+
+
+sensitivity_analysis<- function(data, conserved, composition, prov_conserved){
+    rare_variants <- filter(pa_bec_summary_wide,
+                            percent_comp_prov < quantile(percent_comp_prov, prov_conserved))
+    output<- ggplot() +
+      geom_bc +
+      geom_sf(
+        data = data %>%
+          filter(percent_conserved_ppa < conserved,
+                 (percent_comp_ecoregion > composition | bec_variant %in% rare_variants$bec_variant )),
+        aes(fill = percent_conserved_ppa), colour = NA) +
+      scale_fill_viridis_c() +
+      labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas",
+           caption = paste0("Ecoregions*Variants with <", conserved, "% protected,\nwhere the variant makes up
+                            at least ", composition, "% of an ecoregion\nor is provincially rare (in the bottom ",
+                            prov_conserved,"% of variants)"),
+           fill = "Percent protected") +
+      theme_minimal()
+
+    ggsave(paste0("out/eco_rep_", conserved, "_", composition, "_", prov.conserved, ".png"),
+           output, width = 9, height = 9, dpi = 300)
+    output
+}
+
+
+
+
+
+
+

@@ -16,7 +16,7 @@ source("packages.R")
 source("R/functions.R")
 
 conflict_prefer("filter", "dplyr")
-plan(callr)
+#plan(callr)
 
 #tar_option_set(packages=c("dplyr", "tidyr", "readr", "purrr", "stringr", "ggplot2",
 #                          "lubridate", "glue", "assertr", "sf", "bcmaps", "bcdata",
@@ -44,6 +44,7 @@ intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
   tar_target(eco_bec_clipped, clip_to_bc_boundary(eco_bec, simplify = FALSE)),
   tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped))
+  #tar_target(parks_removed, remove_pa(eco_bec_clipped, clean_pa)))
 )
 
 # simplify spatial data  --------------------------------------------------
@@ -56,9 +57,10 @@ simplify_data <- list(
     group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
     summarise()),
   # Just use rmapshaper::ms_simplify due to bug in sf: https://github.com/r-spatial/sf/issues/1767
-  tar_target(map_pa_background, rmapshaper::ms_simplify(clean_pa, keep = 0.05, keep_shapes = TRUE, explode = TRUE, sys = TRUE) %>%
-               st_make_valid())
+  tar_target(map_pa_background, rmapshaper::ms_simplify(clean_pa, keep = 0.05, keep_shapes = TRUE, sys = TRUE) %>%
+               st_make_valid()),
   # tar_target(map_pa_background, simplify_background_map(clean_pa))
+  tar_target(parks_removed, remove_pa(map_eco_bec_background, map_pa_background))
 )
 
 # analyze and prepare for visualization -----------------------------------
