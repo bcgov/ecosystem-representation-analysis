@@ -73,7 +73,8 @@ summarise_data <- list(
                summarise(bec_eco_area = sum(area), .groups = "drop") %>%
                mutate(percent_comp_prov = bec_eco_area / sum(bec_eco_area) * 100) %>%
                group_by(ecoregion_code) %>%
-               mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)),
+               mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)
+             ),
   tar_target(pa_eco_bec_summary,
              eco_bec_summary %>%
                left_join(
@@ -121,8 +122,11 @@ summarise_data <- list(
 )
 
 
-# Analyze data --------------------------------------
-
+# Scenario data --------------------------------------
+analyze_data <- list(
+  tar_target(scenario_17_3_10, threshold_scenario(parks_removed, pa_bec_summary_wide, 17, 3, 10)),
+  tar_target(scenario_conserved, scenario_output(parks_removed, c(17:30)))
+)
 
 
 
@@ -150,7 +154,8 @@ list(
   intersect_data,
   simplify_data,
   summarise_data,
-  # plot_data,
+  analyze_data,
+  #plot_data,
   save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")

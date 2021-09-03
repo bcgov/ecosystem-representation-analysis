@@ -1,6 +1,8 @@
 ---
 title: "Ecosystem Representation in BC Conserved and Protected Areas"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 <style type="text/css">
@@ -23,7 +25,7 @@ is_pdf <- knitr::is_latex_output()
 
 ```{r tar-load}
 tar_load(c("map_pa_background", "map_eco_bec_background", "pa_eco_bec_summary", "pa_eco_bec_summary_wide", 
-           "map_bec_background", "pa_bec_summary_wide", "map_eco_background"))
+           "map_bec_background", "pa_bec_summary_wide", "map_eco_background", "parks_removed"))
 ```
 
 - Protected Area coverage of BGC Variants (207) and Ecoregions (47)
@@ -87,7 +89,7 @@ if (is_html) ggplotly(comp_by_rep_plot, tooltip = "text") else comp_by_rep_plot
 
 
 ```{r map-eco-bec-subset}
-map_eco_bec <- map_eco_bec_background %>%
+map_eco_bec <- parks_removed %>%
   left_join(pa_eco_bec_summary_wide, 
             by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant")) %>%
   filter(ecoregion_code %in% ecoregion_subset)
@@ -117,7 +119,7 @@ eco_var_rep_map_with_pa
 
 
 ```{r prov-eco-bec-rep-map}
-prov_eco_bec_summary_sf <- map_eco_bec_background %>% 
+prov_eco_bec_summary_sf <- parks_removed %>% 
   left_join(pa_eco_bec_summary_wide, 
             by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant"))
 
@@ -126,7 +128,7 @@ ggplot() +
   geom_sf(data = prov_eco_bec_summary_sf, aes(fill = percent_conserved_ppa), colour = NA) +
   geom_sf(data = map_eco_background, fill = NA, colour = "grey80", size = 0.2) + 
   scale_fill_viridis_c() + 
-  labs(title = "Representation of BEC variants x Ecoregions\n in B.C. Parks and Protected Areas", 
+  labs(title = "Representation of BEC variants x Ecoregions\n in B.C. Parks and Protected Areas\n PPAs & OECMs removed", 
        fill = "Percent of BGC VariantxEcoregion\nprotected") + 
   theme_minimal()
 ```
@@ -151,7 +153,7 @@ p <- ggplot(comp_by_rep_eco_bec,
             aes(x = percent_comp_ecoregion, y = percent_conserved_ppa, colour = zone)) +
   geom_point(aes(text = paste0(ecoregion_name, "*", bec_variant))) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
-  labs(title = "Percent of BEC Variant x Ecoregion conserved in PPAs vs Composition",
+  labs(title = "Percent of BEC Variant x Ecoregion conserved in PPAs vs Composition\n PPAs & OECMs removed",
        x = "Percent variant x ecoregion composition in B.C.",
        y = "Percent of variant x ecoregion conserved in B.C.") +
   theme_bw()
@@ -166,13 +168,13 @@ ggplot() +
   geom_bc + 
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
-      filter(percent_conserved_ppa < 15, 
+      filter(percent_conserved_ppa < 17, 
              (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
-  labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas", 
-       caption = "Ecoregions*Variants with < 15% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+  labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas\n PPAs & OECMs removed", 
+       caption = "Ecoregions*Variants with < 17% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
        fill = "Percent protected") + 
   theme_minimal()
 ```
@@ -183,13 +185,13 @@ ggplot() +
   geom_bc + 
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
-      filter(percent_conserved_ppa < 15, 
+      filter(percent_conserved_ppa < 17, 
              (percent_comp_ecoregion > 1.5 | bec_variant %in% rare_variants$bec_variant )), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
-  labs(title = "<15% protected, >1.5% composition", 
-       caption = "Ecoregions*Variants with < 15% protected,\nwhere the variant makes up at least 1.5% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+  labs(title = "<17% protected, >1.5% composition", 
+       caption = "Ecoregions*Variants with < 17% protected,\nwhere the variant makes up at least 1.5% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
        fill = "Percent protected") + 
   theme_minimal()
 ```

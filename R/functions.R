@@ -242,11 +242,9 @@ intersect_pa <- function(input1, input2){
 }
 
 remove_pa <- function(data1, data2){
-  output <- st_difference(data1, data2) %>%
-   st_make_valid() %>%
-    st_collection_extract(type = "POLYGON") %>%
-   mutate(polygon_id = seq_len(nrow(.)))
-
+  output <- st_difference(data1, st_union(data2)) %>%
+    st_make_valid() %>%
+    st_collection_extract(type = "POLYGON")
   output
 }
 
@@ -645,9 +643,10 @@ write_csv_data <- function(x, dir = "out/data_summaries") {
 # sensitivity analysis
 
 
-sensitivity_analysis<- function(data, conserved, composition, prov_conserved){
-    rare_variants <- filter(pa_bec_summary_wide,
-                            percent_comp_prov < quantile(percent_comp_prov, prov_conserved))
+threshold_scenario <- function(data, background, conserved, composition, prov_conserved){
+
+    rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
+
     output<- ggplot() +
       geom_bc +
       geom_sf(
@@ -669,8 +668,30 @@ sensitivity_analysis<- function(data, conserved, composition, prov_conserved){
 }
 
 
+scenario_output<- function(data, range_no){
 
+  rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
 
+  output <- lapply(range_no, scenario_test)
+
+  scenario_test<- function(range_no){
+                   output<- data %>%
+    filter(percent_conserved_ppa < range_no,
+           (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )) %>%
+    mutate(eco_var_area = as.numeric(st_area(.))) %>%
+    st_set_geometry(NULL) %>%
+    group_by(ecoregion, bec_variant) %>%
+    mutate(sum_eco_var = summarise(eco_var_area)) %>%
+    ungroup() %>%
+    group_by(ecoregion) %>%
+    mutate(n_variants = unique(bec_variant),
+           sum_eco = summarise(eco_var_area)) %>%
+    ungroup() %>%
+    mutate(scenario_sum=sum(eco_var_area))
+  }
+
+  output
+}
 
 
 
