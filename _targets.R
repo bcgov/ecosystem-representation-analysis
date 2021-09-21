@@ -154,7 +154,7 @@ list(
   intersect_data,
   simplify_data,
   summarise_data,
-  analyze_data,
+  #analyze_data,
   #plot_data,
   save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),

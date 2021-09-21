@@ -47,10 +47,12 @@ load_ecoregions <- function(){
 }
 
 load_bec <- function(){
-  bec <- bec(ask = FALSE) %>%
+  bec_data <- bcdc_get_data("WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY")%>%
     rename_all(tolower) %>%
-    st_cast(to="POLYGON", warn = FALSE)
-  bec
+    st_make_valid() %>%
+    st_cast(to = "POLYGON", warn = FALSE)
+  bec_data
+
 }
 
 
@@ -674,6 +676,9 @@ scenario_output<- function(data, range_no){
 
   output <- lapply(range_no, scenario_test)
 
+  for (i in seq_along(df)) {
+    out[i] <- fun(df[[i]])
+  }
   scenario_test<- function(range_no){
                    output<- data %>%
     filter(percent_conserved_ppa < range_no,
