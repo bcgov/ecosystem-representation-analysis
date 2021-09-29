@@ -1,8 +1,8 @@
 ---
 title: "Ecosystem Representation in BC Conserved and Protected Areas"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 <style type="text/css">
@@ -163,18 +163,18 @@ if (is_html) ggplotly(p, tooltip = "text") else p
 
 ```{r underrep-eco-bec-map}
 rare_variants <- filter(pa_bec_summary_wide, 
-                        percent_comp_prov < quantile(percent_comp_prov, .1))
+                        percent_comp_prov < quantile(percent_comp_prov, .05))
 ggplot() + 
   geom_bc + 
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
       filter(percent_conserved_ppa < 17, 
-             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+             (percent_comp_ecoregion > 5 | bec_variant %in% rare_variants$bec_variant)), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
   labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas\n PPAs & OECMs removed", 
-       caption = "Ecoregions*Variants with < 17% protected,\nwhere the variant makes up at least 3% of an ecoregion\nor is provincially rare (in the bottom 10% of variants)", 
+       caption = "Ecoregions*Variants with < 17% protected,\nwhere the variant makes up at least 5% of an ecoregion\nor is provincially rare (in the bottom 5% of variants)", 
        fill = "Percent protected") + 
   theme_minimal()
 ```

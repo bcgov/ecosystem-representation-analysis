@@ -55,6 +55,16 @@ load_bec <- function(){
 
 }
 
+ch_data_load <- function(){
+  ch <- st_read("data/CriticalHabitat.gdb", layer='CriticalHabitats_0826', crs=3005)
+
+  ch_area <- ch %>%
+    rename_all(tolower) %>%
+    st_cast(to = "MULTIPOLYGON", warn = FALSE) %>%
+    st_make_valid() %>%
+    st_cast(to = "POLYGON", warn = FALSE)
+  ch_area
+}
 
 # Intersections with wha and ogma data to add dates -----------------------------------------
 
@@ -69,6 +79,37 @@ fill_in_dates <- function(data, column, join, landtype, output){
     ) %>%
     group_by(rowname) %>%
     slice_max(column, with_ties = FALSE)
+  output
+}
+
+load_and_combine<-function(){
+  faib_layer<-read_stars("data/OG_atriskr_mod.tif")
+  df_second <- st_as_sf(faib_layer, merge=TRUE, long=TRUE) %>%
+    filter(OG_atriskr_mod.tif == 1) %>%
+    st_make_valid()%>%
+    st_cast(to = "POLYGON", warn = FALSE) %>%
+    st_set_crs(3005)
+}
+
+og_load <- function(){
+
+  og <- st_read("data/Overlay_of_Maps123_2021_08_10.shp", crs=3005) %>%
+    st_make_valid() %>%
+    st_cast(to = "POLYGON", warn = FALSE)
+  og
+}
+
+protected_area_load <- function(){
+  pa_tp <- st_read("data/ProtectedForest_2021_08_10.shp", crs=3005) %>%
+    st_make_valid() %>%
+    st_cast(to = "POLYGON", warn = FALSE)
+  pa_tp
+}
+
+merge_areas <- function(prot_data, og_data){
+  output<- st_union(prot_data, og_data) %>%
+    st_make_valid() %>%
+    st_cast(to = "POLYGON", warn = FALSE)
   output
 }
 
@@ -411,6 +452,61 @@ protected_area_by_bec_eco <- function(bec_eco_data, data){# Summarize by bec zon
   output
 }
 
+# ch data
+
+measure_og_ch_habitat<- function(chdata, ch_prot_data){
+
+  ch_prot <- pa_ch%>%
+    mutate(prot_species_area=st_area(.),
+           prot_species_area =as.numeric(set_units(prot_species_area, ha))) %>%
+    st_set_geometry(NULL) %>%
+    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
+             critical_habitat_method, cosewic_status, schedule_status, sara_schedule, pa_type) %>%
+    summarise(prot_species_area = sum(prot_species_area)) %>%
+    pivot_wider(names_from = pa_type, values_from=prot_species_area)
+
+  ch_prot_all <- pa_ch%>%
+    mutate(all_prot_species_area=st_area(.),
+           all_prot_species_area =as.numeric(set_units(all_prot_species_area, ha))) %>%
+    st_set_geometry(NULL) %>%
+    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
+             critical_habitat_method, cosewic_status, schedule_status, sara_schedule) %>%
+    summarise(all_prot_species_area = sum(all_prot_species_area))
+
+  output2<-ch_data %>%
+    mutate(species_area=st_area(.),
+           species_area =as.numeric(set_units(species_area, ha)),
+           species_area = replace_na(species_area,0)) %>%
+    st_set_geometry(NULL) %>%
+    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
+             critical_habitat_method, cosewic_status, schedule_status, sara_schedule) %>%
+    summarise(species_area = sum(species_area))
+
+  output<-ch_prot %>%
+    left_join(ch_prot_all) %>%
+    left_join(output2) %>%
+    mutate_if(is.numeric, ~replace(., is.na(.),0))
+
+
+  g_rank <- read_csv("g_ranks.csv") %>%
+    select(-ID) %>%
+    unique()
+
+  output<-output %>%
+    left_join(g_rank, by=c("scientific_name", "common_name_english", "critical_habitat_status", "critical_habitat_detail",
+                           "critical_habitat_method", "cosewic_status", "schedule_status", "sara_schedule")) %>%
+    mutate(not_prot = species_area - all_prot_species_area) %>%
+    pivot_longer(cols=c(oecm, ppa, not_prot), names_to = "pa_type", values_to = "area") %>%
+    mutate(type_perc = round(area/species_area * 100, digits=2),
+           perc_prot = round(all_prot_species_area/species_area * 100, digits=2))
+
+
+  write.csv(output, "out/data_summaries/prot-sp-critical-habitat.csv")
+  output
+}
+
+
+
 # Supplemental plots ------------------------------------------------------
 
 plot_by_bec_zone <- function(data){
@@ -645,58 +741,58 @@ write_csv_data <- function(x, dir = "out/data_summaries") {
 # sensitivity analysis
 
 
-threshold_scenario <- function(data, background, conserved, composition, prov_conserved){
-
-    rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
-
-    output<- ggplot() +
-      geom_bc +
-      geom_sf(
-        data = data %>%
-          filter(percent_conserved_ppa < conserved,
-                 (percent_comp_ecoregion > composition | bec_variant %in% rare_variants$bec_variant )),
-        aes(fill = percent_conserved_ppa), colour = NA) +
-      scale_fill_viridis_c() +
-      labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas",
-           caption = paste0("Ecoregions*Variants with <", conserved, "% protected,\nwhere the variant makes up
-                            at least ", composition, "% of an ecoregion\nor is provincially rare (in the bottom ",
-                            prov_conserved,"% of variants)"),
-           fill = "Percent protected") +
-      theme_minimal()
-
-    ggsave(paste0("out/eco_rep_", conserved, "_", composition, "_", prov.conserved, ".png"),
-           output, width = 9, height = 9, dpi = 300)
-    output
-}
-
-
-scenario_output<- function(data, range_no){
-
-  rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
-
-  output <- lapply(range_no, scenario_test)
-
-  for (i in seq_along(df)) {
-    out[i] <- fun(df[[i]])
-  }
-  scenario_test<- function(range_no){
-                   output<- data %>%
-    filter(percent_conserved_ppa < range_no,
-           (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )) %>%
-    mutate(eco_var_area = as.numeric(st_area(.))) %>%
-    st_set_geometry(NULL) %>%
-    group_by(ecoregion, bec_variant) %>%
-    mutate(sum_eco_var = summarise(eco_var_area)) %>%
-    ungroup() %>%
-    group_by(ecoregion) %>%
-    mutate(n_variants = unique(bec_variant),
-           sum_eco = summarise(eco_var_area)) %>%
-    ungroup() %>%
-    mutate(scenario_sum=sum(eco_var_area))
-  }
-
-  output
-}
+# threshold_scenario <- function(data, background, conserved, composition, prov_conserved){
+#
+#     rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
+#
+#     output<- ggplot() +
+#       geom_bc +
+#       geom_sf(
+#         data = data %>%
+#           filter(percent_conserved_ppa < conserved,
+#                  (percent_comp_ecoregion > composition | bec_variant %in% rare_variants$bec_variant )),
+#         aes(fill = percent_conserved_ppa), colour = NA) +
+#       scale_fill_viridis_c() +
+#       labs(title = "Underrepresented BEC variants x Ecoregions\n in B.C. Parks and Protected Areas",
+#            caption = paste0("Ecoregions*Variants with <", conserved, "% protected,\nwhere the variant makes up
+#                             at least ", composition, "% of an ecoregion\nor is provincially rare (in the bottom ",
+#                             prov_conserved,"% of variants)"),
+#            fill = "Percent protected") +
+#       theme_minimal()
+#
+#     ggsave(paste0("out/eco_rep_", conserved, "_", composition, "_", prov.conserved, ".png"),
+#            output, width = 9, height = 9, dpi = 300)
+#     output
+# }
+#
+#
+# scenario_output<- function(data, range_no){
+#
+#   rare_variants <- pa_bec_summary_wide %>% filter(percent_comp_prov < quantile(percent_comp_prov, .1))
+#
+#   output <- lapply(range_no, scenario_test)
+#
+#   for (i in seq_along(df)) {
+#     out[i] <- fun(df[[i]])
+#   }
+#   scenario_test<- function(range_no){
+#                    output<- data %>%
+#     filter(percent_conserved_ppa < range_no,
+#            (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )) %>%
+#     mutate(eco_var_area = as.numeric(st_area(.))) %>%
+#     st_set_geometry(NULL) %>%
+#     group_by(ecoregion, bec_variant) %>%
+#     mutate(sum_eco_var = summarise(eco_var_area)) %>%
+#     ungroup() %>%
+#     group_by(ecoregion) %>%
+#     mutate(n_variants = unique(bec_variant),
+#            sum_eco = summarise(eco_var_area)) %>%
+#     ungroup() %>%
+#     mutate(scenario_sum=sum(eco_var_area))
+#   }
+#
+#   output
+# }
 
 
 
