@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 internal.R
+*.csv
 out/*
 tmp/*
 data/*
