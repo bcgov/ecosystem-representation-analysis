@@ -55,16 +55,6 @@ load_bec <- function(){
 
 }
 
-ch_data_load <- function(){
-  ch <- st_read("data/CriticalHabitat.gdb", layer='CriticalHabitats_0826', crs=3005)
-
-  ch_area <- ch %>%
-    rename_all(tolower) %>%
-    st_cast(to = "MULTIPOLYGON", warn = FALSE) %>%
-    st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE)
-  ch_area
-}
 
 # Intersections with wha and ogma data to add dates -----------------------------------------
 
@@ -160,30 +150,6 @@ remove_overlaps <- function(data, sample = NULL ){
   output
 }
 
-# classify_land_type <- function(data){
-#
-#     bc_bound_hres <- bcmaps::bc_bound_hres()
-#
-#     ## Extract the terrestrial and marine portions of GPB into separate objects
-#     pa_terrestrial <- ms_clip(data, bc_bound_hres)
-#     pa_marine <- ms_erase(data, bc_bound_hres)
-#
-#     ## Fix it up:
-#     pa_terrestrial <- fix_geo_problems(pa_terrestrial)
-#     pa_marine <- fix_geo_problems(pa_marine)
-#
-#
-#     pa_terrestrial <- pa_terrestrial %>%
-#       mutate(type = "land")
-#
-#
-#     pa_marine <- pa_marine %>%
-#       mutate(type = "water")
-#
-#     ## Create simplified versions for visualization
-#     pa_comb <- rbind(pa_terrestrial, pa_marine)
-#     pa_comb
-# }
 
 
 # intersect data ----------------------------------------------------------
@@ -452,58 +418,6 @@ protected_area_by_bec_eco <- function(bec_eco_data, data){# Summarize by bec zon
   output
 }
 
-# ch data
-
-measure_og_ch_habitat<- function(chdata, ch_prot_data){
-
-  ch_prot <- pa_ch%>%
-    mutate(prot_species_area=st_area(.),
-           prot_species_area =as.numeric(set_units(prot_species_area, ha))) %>%
-    st_set_geometry(NULL) %>%
-    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
-             critical_habitat_method, cosewic_status, schedule_status, sara_schedule, pa_type) %>%
-    summarise(prot_species_area = sum(prot_species_area)) %>%
-    pivot_wider(names_from = pa_type, values_from=prot_species_area)
-
-  ch_prot_all <- pa_ch%>%
-    mutate(all_prot_species_area=st_area(.),
-           all_prot_species_area =as.numeric(set_units(all_prot_species_area, ha))) %>%
-    st_set_geometry(NULL) %>%
-    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
-             critical_habitat_method, cosewic_status, schedule_status, sara_schedule) %>%
-    summarise(all_prot_species_area = sum(all_prot_species_area))
-
-  output2<-ch_data %>%
-    mutate(species_area=st_area(.),
-           species_area =as.numeric(set_units(species_area, ha)),
-           species_area = replace_na(species_area,0)) %>%
-    st_set_geometry(NULL) %>%
-    group_by(scientific_name, common_name_english, critical_habitat_status, critical_habitat_detail,
-             critical_habitat_method, cosewic_status, schedule_status, sara_schedule) %>%
-    summarise(species_area = sum(species_area))
-
-  output<-ch_prot %>%
-    left_join(ch_prot_all) %>%
-    left_join(output2) %>%
-    mutate_if(is.numeric, ~replace(., is.na(.),0))
-
-
-  g_rank <- read_csv("g_ranks.csv") %>%
-    select(-ID) %>%
-    unique()
-
-  output<-output %>%
-    left_join(g_rank, by=c("scientific_name", "common_name_english", "critical_habitat_status", "critical_habitat_detail",
-                           "critical_habitat_method", "cosewic_status", "schedule_status", "sara_schedule")) %>%
-    mutate(not_prot = species_area - all_prot_species_area) %>%
-    pivot_longer(cols=c(oecm, ppa, not_prot), names_to = "pa_type", values_to = "area") %>%
-    mutate(type_perc = round(area/species_area * 100, digits=2),
-           perc_prot = round(all_prot_species_area/species_area * 100, digits=2))
-
-
-  write.csv(output, "out/data_summaries/prot-sp-critical-habitat.csv")
-  output
-}
 
 
 
