@@ -36,15 +36,17 @@ load_datasets <- list(
 clean_data <- list(
   tar_target(clean_pa, remove_overlaps(pa_data)),
   tar_target(clipped_bec, clip_to_bc_boundary(bec, simplify = TRUE)),
-  tar_target(clipped_eco, clip_to_bc_boundary(ecoregions, simplify = TRUE))
+  tar_target(clipped_eco, clip_to_bc_boundary(ecoregions, simplify = TRUE)),
 )
+
 
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
   tar_target(eco_bec_clipped, clip_to_bc_boundary(eco_bec, simplify = FALSE)),
-  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped))
-  #tar_target(parks_removed, remove_pa(eco_bec_clipped, clean_pa)))
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped)),
+  tar_target(pa_eco_bec_dist, intersect_pa(pa_eco_bec, bcmaps::nr_districts())),
+  tar_target(bec_dist, intersect_pa(clipped_bec, bcmaps::nr_districts()))
 )
 
 # simplify spatial data  --------------------------------------------------
@@ -59,7 +61,7 @@ simplify_data <- list(
   # Just use rmapshaper::ms_simplify due to bug in sf: https://github.com/r-spatial/sf/issues/1767
   tar_target(map_pa_background, rmapshaper::ms_simplify(clean_pa, keep = 0.05, keep_shapes = TRUE, sys = TRUE) %>%
                st_make_valid()),
-  # tar_target(map_pa_background, simplify_background_map(clean_pa))
+  tar_target(map_pa_background, simplify_background_map(clean_pa)),
   tar_target(parks_removed, remove_pa(map_eco_bec_background, map_pa_background))
 )
 
@@ -122,13 +124,6 @@ summarise_data <- list(
 )
 
 
-# Scenario data --------------------------------------
-analyze_data <- list(
-  tar_target(scenario_17_3_10, threshold_scenario(parks_removed, pa_bec_summary_wide, 17, 3, 10)),
-  tar_target(scenario_conserved, scenario_output(parks_removed, c(17:30)))
-)
-
-
 
 # Save csv outputs ----------------------------------
 
@@ -154,8 +149,8 @@ list(
   intersect_data,
   simplify_data,
   summarise_data,
-  #analyze_data,
-  #plot_data,
+  analyze_data,
+  plot_data,
   save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
