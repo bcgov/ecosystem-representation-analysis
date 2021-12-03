@@ -16,13 +16,8 @@ source("packages.R")
 source("R/functions.R")
 
 conflict_prefer("filter", "dplyr")
-#plan(callr)
+plan(callr)
 
-#tar_option_set(packages=c("dplyr", "tidyr", "readr", "purrr", "stringr", "ggplot2",
-#                          "lubridate", "glue", "assertr", "sf", "bcmaps", "bcdata",
-#                          "rmapshaper", "geojsonio", "ggiraph", "cowplot", "shiny",
-#                          "knitr", "rmarkdown", "kableExtra", "tibble"),
-#               imports=c("bcmaps", "bcdata"))
 
 # load datasets ------------------------------------------------------------------------------------
 
@@ -36,18 +31,16 @@ load_datasets <- list(
 clean_data <- list(
   tar_target(clean_pa, remove_overlaps(pa_data)),
   tar_target(clipped_bec, clip_to_bc_boundary(bec, simplify = TRUE)),
-  tar_target(clipped_eco, clip_to_bc_boundary(ecoregions, simplify = TRUE)),
+  tar_target(clipped_eco, clip_to_bc_boundary(ecoregions, simplify = TRUE))
 )
-
 
 # intersect data ----------------------------------------------------------
 intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
   tar_target(eco_bec_clipped, clip_to_bc_boundary(eco_bec, simplify = FALSE)),
-  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped)),
-  tar_target(pa_eco_bec_dist, intersect_pa(pa_eco_bec, bcmaps::nr_districts())),
-  tar_target(bec_dist, intersect_pa(clipped_bec, bcmaps::nr_districts()))
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped))
 )
+
 
 # simplify spatial data  --------------------------------------------------
 simplify_data <- list(
@@ -61,7 +54,7 @@ simplify_data <- list(
   # Just use rmapshaper::ms_simplify due to bug in sf: https://github.com/r-spatial/sf/issues/1767
   tar_target(map_pa_background, rmapshaper::ms_simplify(clean_pa, keep = 0.05, keep_shapes = TRUE, sys = TRUE) %>%
                st_make_valid()),
-  tar_target(map_pa_background, simplify_background_map(clean_pa)),
+  #tar_target(map_pa_background, simplify_background_map(clean_pa)),
   tar_target(parks_removed, remove_pa(map_eco_bec_background, map_pa_background))
 )
 
@@ -71,7 +64,7 @@ summarise_data <- list(
              eco_bec_clipped %>%
                mutate(area = as.numeric(st_area(.))) %>%
                st_drop_geometry() %>%
-               group_by(ecoregion_name, ecoregion_code, zone, subzone, variant) %>%
+               group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label) %>%
                summarise(bec_eco_area = sum(area), .groups = "drop") %>%
                mutate(percent_comp_prov = bec_eco_area / sum(bec_eco_area) * 100) %>%
                group_by(ecoregion_code) %>%
@@ -135,8 +128,8 @@ save_csvs <- list(
 # supplemental bec zone plots ---------------------------------------------
 # **** currently not being used - plots are created in Rmd ****
 plot_data <- list(
-  tar_target(bec_plot_type, plot_by_bec_zone(pa_bec_sum)),
-  tar_target(bec_plot_total, plot_bec_zone_totals(pa_bec_sum)),
+  #tar_target(bec_plot_type, plot_by_bec_zone(pa_bec_sum)),
+  #tar_target(bec_plot_total, plot_bec_zone_totals(pa_bec_sum)),
   tar_target(bec_map_figure, bec_zone_map(map_bec)),
   tar_target(bc_button, create_bc_button())
 )
@@ -149,8 +142,7 @@ list(
   intersect_data,
   simplify_data,
   summarise_data,
-  analyze_data,
-  plot_data,
+  #plot_data,
   save_csvs,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
