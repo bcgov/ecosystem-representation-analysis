@@ -50,11 +50,20 @@ load_bec <- function(){
   bec_data <- bcdc_get_data("WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY")%>%
     rename_all(tolower) %>%
     st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE)
+    st_cast(to = "POLYGON", warn = FALSE) %>%
+    mutate(variant_area = st_area(.),
+           variant_area = as.numeric(set_units(variant_area, ha)))
   bec_data
 
 }
 
+
+bec_area<-function(data){
+  bec_data<- data %>%
+    mutate(variant_area = st_area(.),
+           variant_area = as.numeric(set_units(variant_area, ha)))
+  bec_data
+}
 
 # Intersections with wha and ogma data to add dates -----------------------------------------
 
@@ -69,37 +78,6 @@ fill_in_dates <- function(data, column, join, landtype, output){
     ) %>%
     group_by(rowname) %>%
     slice_max(column, with_ties = FALSE)
-  output
-}
-
-load_and_combine<-function(){
-  faib_layer<-read_stars("data/OG_atriskr_mod.tif")
-  df_second <- st_as_sf(faib_layer, merge=TRUE, long=TRUE) %>%
-    filter(OG_atriskr_mod.tif == 1) %>%
-    st_make_valid()%>%
-    st_cast(to = "POLYGON", warn = FALSE) %>%
-    st_set_crs(3005)
-}
-
-og_load <- function(){
-
-  og <- st_read("data/Overlay_of_Maps123_2021_08_10.shp", crs=3005) %>%
-    st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE)
-  og
-}
-
-protected_area_load <- function(){
-  pa_tp <- st_read("data/ProtectedForest_2021_08_10.shp", crs=3005) %>%
-    st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE)
-  pa_tp
-}
-
-merge_areas <- function(prot_data, og_data){
-  output<- st_union(prot_data, og_data) %>%
-    st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE)
   output
 }
 
@@ -248,6 +226,17 @@ intersect_pa <- function(input1, input2){
     st_collection_extract(type = "POLYGON") %>%
     mutate(polygon_id = seq_len(nrow(.)))
   output
+}
+
+bec_point <- function(variant, eco){
+  points <- st_centroid(variant)
+
+  points <- points %>%
+    st_join(eco) %>%
+    st_make_valid() %>%
+    st_cast(to = "POLYGON")
+  eco
+
 }
 
 remove_pa <- function(data1, data2){
