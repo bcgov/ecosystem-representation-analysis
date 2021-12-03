@@ -1,5 +1,5 @@
 
-tar_load(c(pa_eco_bec_summary_wide, parks_removed, pa_bec_summary_wide))
+tar_load(c(pa_eco_bec_summary_wide, parks_removed, pa_bec_summary_wide, eco_bec_clipped))
 
 geom_bc <- geom_sf(data = bc_bound(), fill = NA, size = 0.2)
 
@@ -85,3 +85,22 @@ dissolved_ch<- ch_data %>%
   summarise()
 
 geojson_write(dissolved_ch, file="out/ch_mask.geojson")
+
+test <- eco_bec_clipped %>%
+  mutate(variant_eco_area = st_area(.),
+         variant_eco_area = as.numeric(set_units(variant_eco_area, ha))) %>%
+  group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label, objectid) %>%
+  summarise(variant_area = sum(variant_area),
+            variant_eco_area = sum(variant_eco_area),
+            n_variants = n()) %>%
+  mutate(percent_var_in_eco = variant_eco_area/variant_area * 100)
+
+write_sf(test, "out/eco_bec_test.gpkg")
+
+
+  mutate(percent_comp_prov = bec_eco_area / sum(bec_eco_area) * 100) %>%
+  group_by(ecoregion_code) %>%
+  mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)
+
+
+
