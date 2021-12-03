@@ -5,6 +5,21 @@
 
 # Analysis of ecosystem representation in BC
 
+The primary outputs of this analysis are:
+1. A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
+2. An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
+
+## Key information for users
+
+- Representation of BEC variants in the Protected Area system in B.C. was calculated by:
+    - Parks and Protected Areas (PPAs) - column name: `percent_conserved_total`
+    - Other Effective Area-Based Conservation Measures (OECMs, defined according to [Canadian Protected and Conserved Areas Database
+    (CPCAD)](https://www.canada.ca/en/environment-climate-change/services/national-wildlife-areas/protected-conserved-areas-database.html)) - column  name: `percent_conserved_oecm`
+    - Total Conserved = PPA + OECM - column name: `perecent_conserved_total`
+
+- The linework between the BC boundary, ecoregions, and BEC variants do not exactly match creating sliver polygons. To reduce the number of slivers and the impact on the overall analysis, the distribution of a variant across two different ecoregions was calculated (`percent_var_in_eco`). 
+    - For the underrepresented spatial output file, if a variant was <5% in an ecoregion, it was considered a sliver and removed from the representation analysis 
+
 ### Data
 
 The analysis uses data from several sources. The data does not need to
