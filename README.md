@@ -5,10 +5,9 @@
 
 # Analysis of ecosystem representation in BC
 
-The outputs of this analysis are:
-- A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
-- An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
-- Summary spreadsheets
+The primary outputs of this analysis are:
+1. A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
+2. An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
 
 ## Key information for users
 
