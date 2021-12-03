@@ -7,10 +7,10 @@
 
 The outputs of this analysis are:
 - A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
+- An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
 - Summary spreadsheets
-- A spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
 
-# Key information for users
+## Key information for users
 
 - Representation of BEC variants in the Protected Area system in B.C. was calculated by:
     - Parks and Protected Areas (PPAs) - column name: `percent_conserved_total`
