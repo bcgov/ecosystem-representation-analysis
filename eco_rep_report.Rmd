@@ -54,7 +54,7 @@ comp_by_rep_bec <- dplyr::filter(pa_bec_summary_wide)
 bec_cols <- bec_colours()[unique(comp_by_rep_bec$zone)]
 
 p <- ggplot(comp_by_rep_bec, aes(x = percent_comp_prov, y = percent_conserved_ppa, colour = zone)) +
-  geom_point(aes(text = bec_variant)) +
+  geom_point(aes(text = bgc_label)) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
   labs(title = "Percent of BGC variant conserved in PPAs vs Composition in B.C.",
        x = "Percent variant composition in B.C.",
@@ -74,7 +74,7 @@ comp_by_rep <- dplyr::filter(pa_eco_bec_summary, pa_type == "ppa",
 bec_cols <- bec_colours()[unique(comp_by_rep$zone)]
 
 comp_by_rep_plot <- ggplot(comp_by_rep, aes(x = percent_comp_ecoregion, y = percent_conserved, colour = zone)) +
-  geom_point(aes(text = bec_variant)) +
+  geom_point(aes(text = bgc_label)) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) +
   facet_wrap(vars(ecoregion_name)) +
   labs(title = "Percent of BEC variant conserved in PPAs vs composition in two selected Ecoregions",
@@ -151,7 +151,7 @@ bec_cols <- bec_colours()[unique(comp_by_rep_eco_bec$zone)]
 
 p <- ggplot(comp_by_rep_eco_bec, 
             aes(x = percent_comp_ecoregion, y = percent_conserved_ppa, colour = zone)) +
-  geom_point(aes(text = paste0(ecoregion_name, "*", bec_variant))) +
+  geom_point(aes(text = paste0(ecoregion_name, "*", bgc_label))) +
     scale_colour_manual(values = bec_cols, breaks = names(bec_cols)) + 
   labs(title = "Percent of BEC Variant x Ecoregion conserved in PPAs vs Composition\n PPAs & OECMs removed",
        x = "Percent variant x ecoregion composition in B.C.",
@@ -169,7 +169,7 @@ ggplot() +
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
       filter(percent_conserved_ppa < 17, 
-             (percent_comp_ecoregion > 5 | bec_variant %in% rare_variants$bec_variant)), 
+             (percent_comp_ecoregion > 5 | bgc_label %in% rare_variants$bgc_label)), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
@@ -186,7 +186,7 @@ ggplot() +
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
       filter(percent_conserved_ppa < 17, 
-             (percent_comp_ecoregion > 1.5 | bec_variant %in% rare_variants$bec_variant )), 
+             (percent_comp_ecoregion > 1.5 | bgc_label %in% rare_variants$bgc_label )), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
@@ -204,7 +204,7 @@ ggplot() +
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
       filter(percent_conserved_ppa < 25, 
-             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+             (percent_comp_ecoregion > 3 | bgc_label %in% rare_variants$bgc_label )), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   #geom_sf(data=map_pa_background, fill="white")+
@@ -222,7 +222,7 @@ ggplot() +
   geom_sf(
     data = prov_eco_bec_summary_sf %>% 
       filter(percent_conserved_ppa < 30, 
-             (percent_comp_ecoregion > 3 | bec_variant %in% rare_variants$bec_variant )), 
+             (percent_comp_ecoregion > 3 | bgc_label %in% rare_variants$bgc_label )), 
     aes(fill = percent_conserved_ppa), colour = NA
   ) +
   scale_fill_viridis_c() + 
@@ -235,7 +235,7 @@ ggplot() +
 
 ```{r summary-barplot, eval=FALSE}
 eco_rep_barplot <- ggplot(dplyr::filter(pa_eco_bec_summary, ecoregion_code %in% ecoregion_subset)) +
-  geom_col(aes(x = reorder_within(bec_variant, percent_conserved, ecoregion_name, fun = sum), y = percent_conserved, fill = pa_type)) +
+  geom_col(aes(x = reorder_within(bgc_label, percent_conserved, ecoregion_name, fun = sum), y = percent_conserved, fill = pa_type)) +
   facet_grid(vars(ecoregion_name), scales = "free_y") +
   coord_flip() +
   scale_fill_discrete(na.translate = FALSE) +
