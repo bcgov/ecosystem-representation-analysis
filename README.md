@@ -5,9 +5,13 @@
 
 # Analysis of ecosystem representation in BC
 
+Ecosystem representation was calculated as the percent conserved of each Biogeoclimatic Ecosystem Classification variant at the Ecoregion and Provincial level.   (https://catalogue.data.gov.bc.ca/dataset/bec-map). 
+
 The primary outputs of this analysis are:
-1. A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
-2. An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
+1. A spatial file detailing the ecosystem representation of BEC variants by Ecoregion and by the Province
+2. A spatial file of underrepresented ecosystems using 17% conserved as a threshold (by Ecoregion). The percent conserved includes terrestrial PPAs and OECMs (`total_conserved`) that were assembled using the output from this repo: https://github.com/bcgov/protected-lands-and-waters-indicator. 
+
+* Users can modify the ecosystem represention layer (1) and create a version of the underrepresented ecosystems layer. 
 
 ## Key information for users
 
