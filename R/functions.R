@@ -50,9 +50,7 @@ load_bec <- function(){
   bec_data <- bcdc_get_data("WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY")%>%
     rename_all(tolower) %>%
     st_make_valid() %>%
-    st_cast(to = "POLYGON", warn = FALSE) %>%
-    mutate(variant_area = st_area(.),
-           variant_area = as.numeric(set_units(variant_area, ha)))
+    st_cast(to = "POLYGON", warn = FALSE)
   bec_data
 
 }
@@ -268,6 +266,22 @@ group_pa_bec_to_multi <- function(pa_eco_bec) {
     summarise(pa_area = as.numeric(sum(pa_area)))
 }
 
+eco_rep_full <- function(data){
+
+output <- data %>%
+  mutate(area = st_area(.),
+         area = as.numeric(set_units(area, ha))) %>%
+  group_by(objectid) %>%
+  mutate(object_id_area = sum(area)) %>%
+  ungroup() %>%
+  group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label, objectid, object_id_area) %>%
+  summarise(variant_eco_area = sum(area)) %>%
+  mutate(perc_by_eco = variant_eco_area/object_id_area*100)
+
+output
+
+}
+
 # Simplify spatial data for visualization---------------------------------------------------
 
 # Run by region/zone
@@ -407,8 +421,35 @@ protected_area_by_bec_eco <- function(bec_eco_data, data){# Summarize by bec zon
   output
 }
 
+eco_rep_layer <- function(layer, bec_sum, eco_bec_sum){
+
+  prov_summary <- bec_sum %>%
+    rename(oecm_prov = oecm,
+           ppa_prov = ppa,
+           total_conserved_prov = total_conserved,
+           percent_conserved_total_prov = percent_conserved_total,
+           percent_conserved_ppa_prov = percent_conserved_ppa,
+           percent_conserved_oecm_prov = percent_conserved_oecm) %>%
+    select(-bec_area, -percent_comp_prov)
 
 
+  full_output <- layer %>%
+    left_join(eco_bec_sum,
+              by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant", "bgc_label")) %>%
+    left_join(prov_summary,
+              by = c("zone", "subzone", "variant", "bgc_label"))
+
+write_sf(full_output, "out/ecosystem_representation.gpkg")
+}
+
+eco_rep_layer_mod <- function(layer, sliver_threshold, conserved_threshold){
+
+  mod_layer <- layer %>%
+    filter(perc_by_eco > sliver_threshold) %>%
+    filter(percent_conserved_total < conserved_threshold)
+
+  write_sf(mod_layer, "out/underrepresented_layer.gpkg")
+}
 
 # Supplemental plots ------------------------------------------------------
 

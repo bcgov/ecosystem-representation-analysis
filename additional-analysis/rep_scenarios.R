@@ -18,10 +18,10 @@ rare_variants <- filter(pa_bec_summary_wide,
 
 scenario_output<-prov_eco_bec_summary_sf %>%
   filter(percent_conserved_total < 17,
-         (percent_comp_ecoregion > 1.25 | bec_variant %in% rare_variants$bec_variant)) %>%
+         (percent_comp_ecoregion > 1.25 | bgc_label %in% rare_variants$bec_variant)) %>%
   st_make_valid()
 
-geojson_write(scenario_output, file="out/bec_scenario_17.gpkg")
+write_sf(scenario_output, "out/bec_17.gpkg")
 
 bec_scenario <- ggplot() +
   geom_bc +
@@ -86,21 +86,95 @@ dissolved_ch<- ch_data %>%
 
 geojson_write(dissolved_ch, file="out/ch_mask.geojson")
 
-test <- eco_bec_clipped %>%
-  mutate(variant_eco_area = st_area(.),
-         variant_eco_area = as.numeric(set_units(variant_eco_area, ha))) %>%
-  group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label, objectid) %>%
-  summarise(variant_area = sum(variant_area),
-            variant_eco_area = sum(variant_eco_area),
-            n_variants = n()) %>%
-  mutate(percent_var_in_eco = variant_eco_area/variant_area * 100)
+ecoregion_area<- bcmaps::ecoregions() %>%
+  mutate(area = st_area(.),
+         area = as.numeric(set_units(area, ha))) %>%
+  st_drop_geometry() %>%
+  rename_all(tolower) %>%
+  group_by(ecoregion_code) %>%
+  summarise(ecoregion_area = sum(area))
 
-write_sf(test, "out/eco_bec_test.gpkg")
+eco_rep_full <- eco_bec_clipped %>%
+  mutate(area = st_area(.),
+         area = as.numeric(set_units(area, ha))) %>%
+  st_drop_geometry() %>%
+  group_by(objectid) %>%
+  mutate(object_id_area = sum(area)) %>%
+  ungroup() %>%
+  group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label, objectid, object_id_area) %>%
+  summarise(variant_eco_area = sum(area)) %>%
+  mutate(perc_by_eco = variant_eco_area/object_id_area*100) %>%
+  group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label) %>%
+  mutate(bec_eco_area = sum(variant_eco_area)) %>%
+  mutate(percent_comp_prov = bec_eco_area / bcmaps::bc_area()) %>%
+  left_join(ecoregion_area) %>%
+  group_by(ecoregion_code) %>%
+  mutate(percent_comp_ecoregion = bec_eco_area / ecoregion_area * 100) %>%
+  filter(perc_by_eco > 5)
 
+
+
+
+write_sf(eco_rep_full, "out/eco_rep_BMP.gpkg")
+
+
+eco_rep_scenario <- eco_bec_clipped %>%
+
+
+
+test_1 <- bec %>%
+  filter(objectid==5131732)
+
+write_sf(test_1, "out/bec_test_5131732.gpkg")
 
   mutate(percent_comp_prov = bec_eco_area / sum(bec_eco_area) * 100) %>%
   group_by(ecoregion_code) %>%
   mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)
 
+ecoregion_area<- bcmaps::ecoregions() %>%
+  mutate(area = as.numeric(st_area(.)),
+         area = as.numeric(set_units(area, ha))) %>%
+  st_drop_geometry() %>%
+  rename_all(tolower) %>%
+  group_by(ecoregion_code) %>%
+  summarise(ecoregion_area = sum(area))
 
+
+
+test <- eco_rep_full %>%
+    mutate(area = as.numeric(st_area(.))) %>%
+    st_drop_geometry() %>%
+    filter(percent_var_in_eco > 5) %>%
+    group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label) %>%
+    summarise(bec_eco_area = sum(area), .groups = "drop") %>%
+    mutate(percent_comp_prov = bec_eco_area / bcmaps::bc_area() * 100) %>%
+    group_by(ecoregion_code) %>%
+    mutate(percent_comp_ecoregion = bec_eco_area / sum(bec_eco_area) * 100)
+
+
+prov_summary <- pa_bec_summary_wide %>%
+  rename(oecm_prov = oecm,
+         ppa_prov = ppa,
+         total_conserved_prov = total_conserved,
+         percent_conserved_total_prov = percent_conserved_total,
+         percent_conserved_ppa_prov = percent_conserved_ppa,
+         percent_conserved_oecm_prov = percent_conserved_oecm) %>%
+  select(-bec_area, -percent_comp_prov)
+
+
+full_representation_layer <- eco_bec_output %>%
+  left_join(pa_eco_bec_summary_wide,
+            by = c("ecoregion_name", "ecoregion_code", "zone", "subzone", "variant", "bgc_label")) %>%
+  left_join(prov_summary,
+            by = c("zone", "subzone", "variant", "bgc_label"))
+write_sf(full_representation_layer, "out/ecosystem_representation.gpkg")
+
+
+  mod_layer <- full_representation_layer %>%
+    filter(perc_by_eco > 5) %>%
+    filter(percent_conserved_total < 17)
+
+  write_sf(mod_layer, "out/underrepresented_layer.gpkg")
+
+mod_sum <- mod_layer
 
