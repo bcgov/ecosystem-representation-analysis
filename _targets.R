@@ -38,9 +38,9 @@ clean_data <- list(
 intersect_data <- list(
   tar_target(eco_bec, intersect_pa(ecoregions, bec)),
   tar_target(eco_bec_clipped, clip_to_bc_boundary(eco_bec, simplify = FALSE)),
-  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_clipped))
+  tar_target(eco_bec_output, eco_rep_full(eco_bec_clipped)),
+  tar_target(pa_eco_bec, intersect_pa(clean_pa, eco_bec_output))
 )
-
 
 # simplify spatial data  --------------------------------------------------
 simplify_data <- list(
@@ -60,9 +60,10 @@ simplify_data <- list(
 
 # analyze and prepare for visualization -----------------------------------
 summarise_data <- list(
-  tar_target(eco_bec_summary,
+  tar_target(eco_bec_summary, #calculate the percent composition of each variant/ecoregion combo
              eco_bec_clipped %>%
-               mutate(area = as.numeric(st_area(.))) %>%
+               mutate(area = st_area(.),
+                      area = as.numeric(set_units(area, ha))) %>%
                st_drop_geometry() %>%
                group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, bgc_label) %>%
                summarise(bec_eco_area = sum(area), .groups = "drop") %>%
@@ -74,7 +75,8 @@ summarise_data <- list(
              eco_bec_summary %>%
                left_join(
                  pa_eco_bec %>%
-                   mutate(conserved_area = as.numeric(st_area(.))) %>%
+                   mutate(conserved_area = st_area(.),
+                          conserved_area = as.numeric(set_units(conserved_area, ha)))%>%
                    st_drop_geometry() %>%
                    group_by(ecoregion_name, ecoregion_code, zone, subzone, variant, pa_type) %>%
                    summarise(conserved_area = sum(conserved_area), .groups = "drop"),
@@ -86,8 +88,7 @@ summarise_data <- list(
                fill(bec_eco_area, percent_comp_prov, percent_comp_ecoregion, .direction = "downup") %>%
                ungroup() %>%
                dplyr::filter(!is.na(pa_type)) %>%
-               mutate(bec_variant = paste0(zone, subzone, replace_na(variant, "")),
-                      percent_conserved = conserved_area / bec_eco_area * 100)
+               mutate(percent_conserved = conserved_area / bec_eco_area * 100)
   ),
   tar_target(pa_eco_bec_summary_wide,
              pa_eco_bec_summary %>%
@@ -101,7 +102,7 @@ summarise_data <- list(
   tar_target(pa_bec_summary_wide,
              pa_eco_bec_summary_wide %>%
                select(-percent_comp_ecoregion, bec_area = bec_eco_area) %>%
-               group_by(zone, subzone, variant, bec_variant) %>%
+               group_by(zone, subzone, variant, bgc_label) %>%
                summarise(across(where(is.numeric), .fns = sum, na.rm = TRUE), .groups = "drop") %>%
                mutate(percent_conserved_total = total_conserved / bec_area * 100,
                       percent_conserved_ppa = ppa / bec_area * 100,
@@ -124,6 +125,11 @@ save_csvs <- list(
   tar_target(eco_bec_summary_csv, write_csv_data(eco_bec_summary), format = "file")
 )
 
+save_output <- list(
+  tar_target(ecosystem_representation, eco_rep_layer(eco_bec_output, pa_bec_summary_wide, pa_eco_bec_summary_wide)),
+  tar_target(underrepresented_layer, eco_rep_layer_mod(ecosystem_representation, 5, 17))
+)
+
 
 # supplemental bec zone plots ---------------------------------------------
 # **** currently not being used - plots are created in Rmd ****
@@ -144,6 +150,7 @@ list(
   summarise_data,
   #plot_data,
   save_csvs,
+  save_output,
   tar_render(report_html, "eco_rep_report.Rmd", output_format = "html_document"),
   tar_render(report_pdf, "eco_rep_report.Rmd", output_format = "pdf_document")
 )
