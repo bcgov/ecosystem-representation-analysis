@@ -170,11 +170,13 @@ full_representation_layer <- eco_bec_output %>%
 write_sf(full_representation_layer, "out/ecosystem_representation.gpkg")
 
 
-  mod_layer <- full_representation_layer %>%
+  mod_layer <- eco_bec_output %>%
     filter(perc_by_eco > 5) %>%
-    filter(percent_conserved_total < 17)
+    filter(variant_eco_area < 10000) %>%
+    filter(percent_conserved_total >17)
 
-  write_sf(mod_layer, "out/underrepresented_layer.gpkg")
+
+  write_sf(mod_layer, "out/mod_layer_10.gpkg")
 
 mod_sum <- mod_layer
 

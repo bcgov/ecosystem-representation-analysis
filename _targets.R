@@ -122,12 +122,15 @@ summarise_data <- list(
 # Save csv outputs ----------------------------------
 
 save_csvs <- list(
-  tar_target(eco_bec_summary_csv, write_csv_data(eco_bec_summary), format = "file")
+  tar_target(eco_bec_summary_csv, write_csv_data(eco_bec_summary), format = "file"),
+  tar_target(pa_eco_bec_summary_csv, write_csv_data(pa_eco_bec_summary_wide), format = "file"),
+  tar_target(pa_eco_summary_csv, write_csv_data(pa_eco_summary_wide), format = "file"),
+  tar_target(pa_bec_summary_csv, write_csv_data(pa_bec_summary_wide), format = "file")
 )
 
 save_output <- list(
-  tar_target(ecosystem_representation, eco_rep_layer(eco_bec_output, pa_bec_summary_wide, pa_eco_bec_summary_wide)),
-  tar_target(underrepresented_layer, eco_rep_layer_mod(ecosystem_representation, 5, 17))
+  tar_target(ecosystem_representation, eco_rep_layer(eco_bec_output, pa_bec_summary_wide, pa_eco_bec_summary_wide))#,
+  #tar_target(underrepresented_layer, eco_rep_layer_mod(ecosystem_representation, 5, 17))
 )
 
 
