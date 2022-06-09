@@ -5,18 +5,26 @@
 
 # Analysis of ecosystem representation in BC
 
+Ecosystem representation was calculated as the percent conserved of each Biogeoclimatic Ecosystem Classification variant at the Ecoregion and Provincial level.   (https://catalogue.data.gov.bc.ca/dataset/bec-map). 
+
 The primary outputs of this analysis are:
-1. A spatial file detailing the overall ecosystem representation using BEC variants by Ecoregion and by the Province
-2. An example spatial file of underrepresented ecosystems using 17% protected as a threshold (by Ecoregion and Province)
+1. A spatial file detailing the ecosystem representation of BEC variants by Ecoregion and by the Province
+2. A spatial file of underrepresented ecosystems using 17% conserved as a threshold (by Ecoregion). The percent conserved includes terrestrial PPAs and OECMs (`total_conserved`) that were assembled using the output from this repo: https://github.com/bcgov/protected-lands-and-waters-indicator. 
+
+* Users can modify the ecosystem represention layer (1) and create a version of the underrepresented ecosystems layer. 
 
 ## Key information for users
 
-- Representation of BEC variants in the Protected Area system in B.C. was calculated by:
+- Representation of BEC variants in the Protected/Conserved Area system in B.C. was calculated at the Ecoregion level:
     - Parks and Protected Areas (PPAs) - column name: `percent_conserved_total`
     - Other Effective Area-Based Conservation Measures (OECMs, defined according to [Canadian Protected and Conserved Areas Database
     (CPCAD)](https://www.canada.ca/en/environment-climate-change/services/national-wildlife-areas/protected-conserved-areas-database.html)) - column  name: `percent_conserved_oecm`
     - Total Conserved = PPA + OECM - column name: `perecent_conserved_total`
-
+- Representation at the provincial level: 
+    - Parks and Protected Areas (PPAs) - column name: `percent_conserved_total_prov`
+    - Other Effective Area-Based Conservation Measures (OECMs, defined according to [Canadian Protected and Conserved Areas Database
+    (CPCAD)](https://www.canada.ca/en/environment-climate-change/services/national-wildlife-areas/protected-conserved-areas-database.html)) - column  name: `percent_conserved_oecm_prov`
+    - Total Conserved = PPA + OECM - column name: `perecent_conserved_total_prov`
 - The linework between the BC boundary, ecoregions, and BEC variants do not exactly match creating sliver polygons. To reduce the number of slivers and the impact on the overall analysis, the distribution of a variant across two different ecoregions was calculated (`percent_var_in_eco`). 
     - For the underrepresented spatial output file, if a variant was <5% in an ecoregion, it was considered a sliver and removed from the representation analysis 
 
